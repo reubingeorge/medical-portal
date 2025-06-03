@@ -1,0 +1,87 @@
+{% load i18n %}
+
+{% if users %}
+<table class="table">
+    <thead>
+        <tr>
+            <th>{% trans "User" %}</th>
+            <th>{% trans "Email" %}</th>
+            <th>{% trans "Role" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Last Login" %}</th>
+            <th class="text-center">{% trans "Actions" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td class="align-middle">
+                <div class="flex items-center">
+                    <div class="user-avatar">{{ user.get_initials }}</div>
+                    <div class="ml-3">
+                        <div class="font-medium">{{ user.get_full_name }}</div>
+                        <div class="text-sm text-gray-500">ID: {{ user.id }}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="align-middle">
+                {{ user.email }}
+            </td>
+            <td class="align-middle">
+                <span class="badge badge-info">
+                    {{ user.get_role_display }}
+                </span>
+            </td>
+            <td class="align-middle">
+                {% if user.is_active and user.is_email_verified %}
+                <span class="badge badge-success">{% trans "Active" %}</span>
+                {% elif user.is_active and not user.is_email_verified %}
+                <span class="badge badge-warning">{% trans "Unverified" %}</span>
+                {% else %}
+                <span class="badge badge-danger">{% trans "Suspended" %}</span>
+                {% endif %}
+            </td>
+            <td class="align-middle">
+                {% if user.last_login %}
+                {{ user.last_login|date:"M d, Y H:i" }}
+                {% else %}
+                <span class="text-gray-400">{% trans "Never" %}</span>
+                {% endif %}
+            </td>
+            <td class="text-center align-middle">
+                <div class="flex space-x-2 justify-center">
+                    <a 
+                        href="{% url 'accounts:user_edit' user.id %}" 
+                        class="action-button secondary-button text-xs"
+                    >
+                        {% trans "Edit" %}
+                    </a>
+                    
+                    {% if user.role.name == 'patient' and not user.assigned_doctor %}
+                    <a 
+                        href="{% url 'accounts:assign_doctor' user.id %}" 
+                        class="action-button secondary-button text-xs"
+                    >
+                        {% trans "Assign Doctor" %}
+                    </a>
+                    {% endif %}
+                    
+                    {% if user.is_patient %}
+                    <a 
+                        href="{% url 'medical:admin_patient_detail' user.id %}" 
+                        class="action-button primary-button text-xs"
+                    >
+                        {% trans "Details" %}
+                    </a>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="empty-state">
+    <p>{% trans "No users found matching your criteria." %}</p>
+</div>
+{% endif %}

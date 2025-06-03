@@ -1,0 +1,89 @@
+{% load i18n %}
+
+<form method="post" enctype="multipart/form-data" class="space-y-4" hx-post="{% url 'chat:admin_chat_documents' %}" hx-swap="none" hx-target="#document-list">
+    {% csrf_token %}
+    
+    <div class="space-y-2">
+        <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.title.label }}
+        </label>
+        {{ form.title }}
+        {% if form.title.errors %}
+            <p class="text-red-500 text-sm">{{ form.title.errors.0 }}</p>
+        {% endif %}
+    </div>
+    
+    <div class="space-y-2">
+        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.description.label }}
+        </label>
+        {{ form.description }}
+        {% if form.description.errors %}
+            <p class="text-red-500 text-sm">{{ form.description.errors.0 }}</p>
+        {% endif %}
+    </div>
+    
+    <div class="space-y-2">
+        <label for="{{ form.document_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.document_type.label }}
+        </label>
+        {{ form.document_type }}
+        {% if form.document_type.errors %}
+            <p class="text-red-500 text-sm">{{ form.document_type.errors.0 }}</p>
+        {% endif %}
+    </div>
+    
+    <div class="space-y-2">
+        <label for="{{ form.cancer_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.cancer_type.label }}
+        </label>
+        {{ form.cancer_type }}
+        {% if form.cancer_type.errors %}
+            <p class="text-red-500 text-sm">{{ form.cancer_type.errors.0 }}</p>
+        {% endif %}
+        <p class="text-xs text-gray-500">{% translate "Document content will be analyzed to suggest a cancer type if not selected" %}</p>
+    </div>
+    
+    <div class="space-y-2">
+        <label for="{{ form.file.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.file.label }}
+        </label>
+        <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-6" id="file-drop-area">
+            <div class="text-center" id="upload-prompt">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-1 text-sm text-gray-500">
+                    {% translate "Drag and drop a file here, or" %}
+                    <label for="{{ form.file.id_for_label }}" class="font-medium text-blue-600 hover:text-blue-500 cursor-pointer">
+                        {% translate "browse" %}
+                    </label>
+                </p>
+                <p class="text-xs text-gray-500">
+                    {% translate "Supported file types: PDF, DOC, DOCX, TXT (max 20MB)" %}
+                </p>
+            </div>
+            <div class="hidden" id="file-preview">
+                <div class="flex items-center">
+                    <svg class="h-6 w-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <span class="ml-2 text-sm font-medium text-gray-700" id="file-name"></span>
+                    <button type="button" class="ml-auto text-sm text-red-500" id="remove-file">
+                        {% translate "Remove" %}
+                    </button>
+                </div>
+            </div>
+            {{ form.file }}
+            {% if form.file.errors %}
+                <p class="text-red-500 text-sm mt-2">{{ form.file.errors.0 }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="pt-2">
+        <button type="submit" class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            {% translate "Upload Document" %}
+        </button>
+    </div>
+</form>

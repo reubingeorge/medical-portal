@@ -1,0 +1,637 @@
+{% load i18n %}
+{% load static %}
+
+<!-- Form with simplified structure for reliable behavior -->
+<style>
+    /* Fix for select dropdowns with important flags and !important to override any conflicting styles */
+    select.form-select {
+        height: 38px !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+        background-position: right 0.5rem center !important;
+        background-repeat: no-repeat !important;
+        background-size: 1.5em 1.5em !important;
+        padding-right: 2.5rem !important;
+        box-sizing: border-box !important;
+        display: block !important;
+    }
+    
+    /* Even more specific selectors with !important flags */
+    #id_cancer_type, #id_cancer_organ {
+        height: 38px !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        display: block !important;
+        margin-bottom: 10px !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e") !important;
+        background-position: right 0.5rem center !important;
+        background-repeat: no-repeat !important;
+        background-size: 1.5em 1.5em !important;
+        padding-right: 2.5rem !important;
+    }
+    
+    /* Fix for textarea fields */
+    textarea.form-input {
+        min-height: 80px !important;
+        width: 100% !important;
+    }
+    
+    /* Additional fixes for form inputs */
+    .form-input, .form-select {
+        border-radius: 0.375rem !important;
+        border: 1px solid #d1d5db !important;
+        padding: 0.5rem 0.75rem !important;
+        background-color: white !important;
+        font-size: 0.875rem !important;
+        line-height: 1.25rem !important;
+    }
+</style>
+
+<form id="document-review-form" method="post" action="{% url 'medical:review_medical_document' document.id %}" onsubmit="return handleFormSubmission(this)">
+    {% csrf_token %}
+    <!-- Store original values for verification -->
+    <input type="hidden" id="original_description" value="{{ form.description.value|default:'' }}">
+    <input type="hidden" id="original_patient_notes" value="{{ form.patient_notes.value|default:'' }}">
+    <input type="hidden" id="original_title" value="{{ form.title.value|default:'' }}">
+    <input type="hidden" id="document_id" value="{{ document.id }}">
+    <input type="hidden" id="patient_id" value="{{ patient.id }}">
+    
+    <div class="space-y-4">
+        <!-- Title field -->
+        <div>
+            <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.title.label }} *
+            </label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.title.errors.0 }}</p>
+            {% endif %}
+        </div>
+        
+        <!-- Document type field -->
+        <div>
+            <label for="{{ form.document_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.document_type.label }} *
+            </label>
+            {% if is_pathology_report %}
+            <div class="flex items-center">
+                {{ form.document_type }}
+                <span class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {% trans "Pathology Report" %}
+                </span>
+            </div>
+            {% else %}
+            {{ form.document_type }}
+            {% endif %}
+            {% if form.document_type.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.document_type.errors.0 }}</p>
+            {% endif %}
+            {% if is_pathology_report %}
+            <p class="mt-1 text-xs text-green-600">{% trans "AI has identified this document as a pathology report" %}</p>
+            {% endif %}
+        </div>
+        
+        <!-- Cancer organ type field -->
+        <div>
+            <label for="{{ form.cancer_organ.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.cancer_organ.label }}
+            </label>
+            <select name="{{ form.cancer_organ.name }}" id="id_cancer_organ" class="form-select w-full h-10">
+                <option value="">--- {% trans "Select a cancer organ type" %} ---</option>
+                {% for value, label in form.cancer_organ.field.choices %}
+                {% if value and label != "---------" %}
+                <option value="{{ value }}" {% if form.cancer_organ.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+            {% if form.cancer_organ.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.cancer_organ.errors.0 }}</p>
+            {% endif %}
+        </div>
+        
+        <!-- Cancer subtype field -->
+        <div>
+            <label for="{{ form.cancer_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.cancer_type.label }} *
+            </label>
+            <select name="{{ form.cancer_type.name }}" id="id_cancer_type" class="form-select w-full h-10" required>
+                <option value="">--- {% trans "Select a cancer type" %} ---</option>
+                {% if form.cancer_type.field.choices %}
+                {% for value, label in form.cancer_type.field.choices %}
+                {% if value and label != "---------" %}
+                <option value="{{ value }}" {% if form.cancer_type.value|stringformat:"s" == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                {% endif %}
+                {% endfor %}
+                {% endif %}
+            </select>
+            {% if form.cancer_type.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.cancer_type.errors.0 }}</p>
+            {% endif %}
+            
+            <!-- Hidden field to store current cancer type for fallback -->
+            {% if document.cancer_type %}
+            <input type="hidden" name="current_cancer_type" value="{{ document.cancer_type.id }}" data-name="{{ document.cancer_type.name }}" data-organ-id="{% if document.cancer_type.is_organ %}{{ document.cancer_type.id }}{% elif document.cancer_type.parent %}{{ document.cancer_type.parent.id }}{% endif %}">
+            {% endif %}
+        </div>
+        
+        <!-- Description field -->
+        <div>
+            <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.description.label }} *
+            </label>
+            {{ form.description }}
+            {% if form.description.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">{% trans "Internal description (not visible to the patient)" %}</p>
+        </div>
+        
+        <!-- Patient notes field -->
+        <div>
+            <label for="{{ form.patient_notes.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.patient_notes.label }} *
+            </label>
+            {{ form.patient_notes }}
+            {% if form.patient_notes.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.patient_notes.errors.0 }}</p>
+            {% endif %}
+            <p class="mt-1 text-xs text-gray-500">{% trans "Notes visible to the patient about this document" %}</p>
+        </div>
+        
+        <!-- Language field -->
+        <div>
+            <label for="{{ form.language.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.language.label }}
+            </label>
+            {{ form.language }}
+            {% if form.language.errors %}
+            <p class="mt-1 text-sm text-red-600">{{ form.language.errors.0 }}</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+        <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm">
+            {% trans "Save Changes" %}
+        </button>
+        <button id="form-cancel-button" type="button" onclick="parent.cancelReview ? parent.cancelReview() : (window.cancelReview ? window.cancelReview() : window.location.href='/medical/document/{{ document.id }}/review/?action=cancel')" class="mt-3 w-full inline-flex justify-center rounded-md border border-red-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-red-700 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:mt-0 sm:col-start-1 sm:text-sm">
+            {% trans "Cancel & Delete Document" %}
+        </button>
+    </div>
+</form>
+
+<script>
+// Function to hash form data for comparison
+function hashFormData(form) {
+    const data = {
+        title: form.querySelector('[name="title"]')?.value || '',
+        description: form.querySelector('[name="description"]')?.value || '',
+        patient_notes: form.querySelector('[name="patient_notes"]')?.value || '',
+        cancer_type: form.querySelector('[name="cancer_type"]')?.value || '',
+        document_type: form.querySelector('[name="document_type"]')?.value || ''
+    };
+    
+    return {
+        hash: JSON.stringify(data),
+        data: data
+    };
+}
+
+// Store the form data before submission
+let formDataBeforeSubmit = null;
+
+// This function is designed to work with the parent page's cancelReview function
+function goToPatientPage() {
+    // Try to use the parent page's cancelReview function first
+    if (window.parent && typeof window.parent.cancelReview === 'function') {
+        console.log('Using parent window cancelReview function');
+        return window.parent.cancelReview();
+    }
+
+    // Try to use the current window's cancelReview function next
+    if (typeof window.cancelReview === 'function') {
+        console.log('Using current window cancelReview function');
+        return window.cancelReview();
+    }
+
+    // Get IDs for direct navigation
+    const documentId = document.getElementById('document_id')?.value;
+    const patientId = document.getElementById('patient_id')?.value;
+
+    console.log('Falling back to direct navigation');
+
+    // If we have a document ID, try to use the cancel action
+    if (documentId) {
+        const cancelUrl = `/medical/document/${documentId}/review/?action=cancel`;
+
+        try {
+            // Directly go to the patient page as a reliable fallback
+            if (patientId) {
+                window.location.href = `/medical/clinician/patient/${patientId}/`;
+                return false;
+            }
+
+            // If no patient ID, try the cancel URL one time only
+            window.location.href = cancelUrl;
+        } catch (e) {
+            console.error('Navigation attempt failed:', e);
+            window.history.back();
+        }
+    } else if (patientId) {
+        // If we have a patient ID but no document ID, go to patient page
+        window.location.href = `/medical/clinician/patient/${patientId}/`;
+    } else {
+        // Absolute fallback: go back or to dashboard
+        try {
+            window.history.back();
+        } catch (e) {
+            window.location.href = '/medical/clinician/';
+        }
+    }
+
+    return false;
+}
+
+// Verify form before submission
+function verifyFormBeforeSubmit(form) {
+    // Let the submit event handler handle everything
+    return true;
+}
+
+// New handler for form submission with improved feedback
+function handleFormSubmission(form) {
+    console.log('Form submission started');
+    
+    // Create a loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+    loadingOverlay.id = 'form-submission-overlay';
+    loadingOverlay.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+            <div class="animate-spin h-12 w-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-lg font-medium text-gray-700">Saving changes...</p>
+            <p class="text-sm text-gray-500 mt-2">Please wait while we update the document.</p>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+    
+    // Show loading overlay
+    loadingOverlay.style.display = 'flex';
+    
+    // Get form data for submission
+    const formData = new FormData(form);
+    
+    // Get document ID and patient ID
+    const documentId = document.getElementById('document_id').value;
+    const patientId = document.getElementById('patient_id').value;
+    
+    if (!documentId) {
+        showError('No document ID found. Please refresh the page and try again.');
+        return false;
+    }
+    
+    // Submit form directly via fetch instead of form submission
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status} ${response.statusText}`);
+        }
+        return response.text();
+    })
+    .then(responseText => {
+        console.log('Form submitted successfully');
+
+        // Verify the data was saved by making a request to get the updated document data
+        return fetch(`/medical/document/${documentId}/api/data/`);
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Verification failed: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(updatedData => {
+        console.log('Document data updated successfully:', updatedData);
+
+        // Show success message with the saved data
+        showSuccessWithData(updatedData);
+
+        // Redirect back to patient page after a longer delay to show the user the saved data
+        setTimeout(() => {
+            if (patientId) {
+                window.location.href = `/medical/clinician/patient/${patientId}/`;
+            } else {
+                // If we can't find the patient ID, just go back to the previous page
+                window.history.back();
+            }
+        }, 5000); // Increased delay to 5 seconds so user can clearly see the confirmation
+    })
+    .catch(error => {
+        console.error('Form submission error:', error);
+
+        // Check if it's a verification error
+        if (error.message && error.message.includes('Verification failed')) {
+            // Show specific error for verification failures
+            showError('Your changes were submitted, but we could not verify the database update. The data may have been saved, but please check the document details to confirm.');
+
+            // Try to redirect after a delay anyway
+            setTimeout(() => {
+                if (patientId) {
+                    window.location.href = `/medical/clinician/patient/${patientId}/`;
+                } else {
+                    window.history.back();
+                }
+            }, 7000); // Longer delay for error message reading
+        } else {
+            // Generic error
+            showError('Failed to save changes. Please try again.');
+        }
+    });
+    
+    // Prevent normal form submission
+    return false;
+}
+
+// Helper to show success message
+function showSuccess() {
+    // Remove loading overlay
+    const loadingOverlay = document.getElementById('form-submission-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+
+    // Create success message
+    const successMessage = document.createElement('div');
+    successMessage.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+    successMessage.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-md mx-auto">
+            <div class="bg-green-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
+                <svg class="h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Changes Saved Successfully</h3>
+            <p class="text-sm text-gray-500 mt-2">Your document has been updated with the provided information.</p>
+            <button type="button" class="mt-4 inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                    onclick="goToPatientPage()">
+                Return to Patient Page
+            </button>
+        </div>
+    `;
+    document.body.appendChild(successMessage);
+}
+
+// Helper to show success message with database data
+function showSuccessWithData(data) {
+    // Remove loading overlay
+    const loadingOverlay = document.getElementById('form-submission-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+
+    // Format the timestamp for display
+    const formattedDate = data.last_modified ? new Date(data.last_modified).toLocaleString() : 'Unknown';
+
+    // Get cancer type name if possible
+    let cancerTypeName = "Loading...";
+    if (data.cancer_type) {
+        // Try to find the name in the select options
+        const cancerTypeSelect = document.getElementById('id_cancer_type');
+        if (cancerTypeSelect) {
+            const selectedOption = Array.from(cancerTypeSelect.options).find(option => option.value === String(data.cancer_type));
+            if (selectedOption) {
+                cancerTypeName = selectedOption.textContent;
+            } else {
+                cancerTypeName = `ID: ${data.cancer_type}`;
+            }
+        } else {
+            cancerTypeName = `ID: ${data.cancer_type}`;
+        }
+    } else {
+        cancerTypeName = 'Not set';
+    }
+
+    // Create success message with data details
+    const successMessage = document.createElement('div');
+    successMessage.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+
+    // Prepare notification messages
+    let recordMessage = '';
+
+    // Show patient record creation message if applicable
+    if (data.patient_record_created) {
+        recordMessage += `
+        <div class="mt-3 bg-blue-50 p-3 rounded-md border border-blue-200">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-blue-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-blue-800 font-medium">New patient medical record has been created!</span>
+            </div>
+            <p class="text-sm text-blue-700 mt-1">A medical record for this patient was automatically created with the selected cancer type.</p>
+        </div>`;
+    }
+
+    // Show recommended treatment message if applicable
+    if (data.treatment_copied) {
+        recordMessage += `
+        <div class="mt-3 bg-green-50 p-3 rounded-md border border-green-200">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-green-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-green-800 font-medium">Recommended treatment copied!</span>
+            </div>
+            <p class="text-sm text-green-700 mt-1">The recommended treatment from this document has been copied to the patient's medical record.</p>
+        </div>`;
+    } else {
+        // Show hint about AI analysis if AI fields exist in the database
+        recordMessage += `
+        <div class="mt-3 bg-yellow-50 p-3 rounded-md border border-yellow-200">
+            <div class="flex items-center">
+                <svg class="h-5 w-5 text-yellow-600 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-yellow-800 font-medium">Note about treatments</span>
+            </div>
+            <p class="text-sm text-yellow-700 mt-1">
+                If AI detected a treatment recommendation in this document, it will be automatically extracted when you save.
+                You'll be able to see the treatment in the patient's medical record page.
+            </p>
+        </div>`;
+    }
+
+    // Use the combined messages
+    const patientRecordMessage = recordMessage;
+
+    successMessage.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-lg mx-auto">
+            <div class="bg-green-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
+                <svg class="h-10 w-10 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Changes Saved Successfully!</h3>
+            <div class="mt-4 bg-gray-50 p-4 rounded-md text-left">
+                <h4 class="font-medium text-gray-800 mb-2">Database Update Confirmed:</h4>
+                <ul class="space-y-2 text-sm text-gray-700">
+                    <li><span class="font-medium">Title:</span> ${data.title}</li>
+                    <li><span class="font-medium">Document Type:</span> ${data.document_type}</li>
+                    <li><span class="font-medium">Description:</span> ${data.description.substring(0, 50)}${data.description.length > 50 ? '...' : ''}</li>
+                    <li><span class="font-medium">Patient Notes:</span> ${data.patient_notes.substring(0, 50)}${data.patient_notes.length > 50 ? '...' : ''}</li>
+                    <li><span class="font-medium">Cancer Type:</span> ${cancerTypeName}</li>
+                    <li><span class="font-medium">Last Modified:</span> ${formattedDate}</li>
+                </ul>
+            </div>
+            ${patientRecordMessage}
+            <p class="text-sm text-gray-600 mt-4">The MedicalDocument database record has been successfully updated with your changes.</p>
+            <button type="button" class="mt-4 inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                    onclick="goToPatientPage()">
+                Return to Patient Page
+            </button>
+        </div>
+    `;
+    document.body.appendChild(successMessage);
+}
+
+// Helper to show error message
+function showError(message) {
+    // Remove loading overlay
+    const loadingOverlay = document.getElementById('form-submission-overlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+    
+    // Create error message
+    const errorMessage = document.createElement('div');
+    errorMessage.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+    errorMessage.innerHTML = `
+        <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-md mx-auto">
+            <div class="bg-red-100 rounded-full h-16 w-16 flex items-center justify-center mx-auto mb-4">
+                <svg class="h-10 w-10 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h3 class="text-lg font-medium text-gray-900">Error</h3>
+            <p class="text-sm text-red-500 mt-2">${message}</p>
+            <button type="button" class="mt-4 inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm"
+                    onclick="this.parentNode.parentNode.remove()">
+                Dismiss
+            </button>
+        </div>
+    `;
+    document.body.appendChild(errorMessage);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Get form elements
+    const form = document.getElementById('document-review-form');
+    const cancerOrganSelect = document.getElementById('id_cancer_organ');
+    const cancerTypeSelect = document.getElementById('id_cancer_type');
+    
+    // Set up cancer organ change handler
+    if (cancerOrganSelect && cancerTypeSelect) {
+        cancerOrganSelect.addEventListener('change', function() {
+            const organId = this.value;
+            if (!organId) return;
+            
+            // Clear current options
+            cancerTypeSelect.innerHTML = '<option value="">--- {% trans "Select a cancer type" %} ---</option>';
+            
+            // Show loading indicator
+            const loadingOption = document.createElement('option');
+            loadingOption.value = '';
+            loadingOption.disabled = true;
+            loadingOption.textContent = 'Loading subtypes...';
+            cancerTypeSelect.appendChild(loadingOption);
+            
+            // Fetch subtypes for this organ
+            fetch('/medical/get_subtypes/?organ_id=' + organId)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    cancerTypeSelect.innerHTML = html;
+                    
+                    // Check if we have a current cancer type to select
+                    const currentCancerTypeInput = document.querySelector('input[name="current_cancer_type"]');
+                    if (currentCancerTypeInput) {
+                        const currentTypeId = currentCancerTypeInput.value;
+                        const options = cancerTypeSelect.querySelectorAll('option');
+                        
+                        for (let option of options) {
+                            if (option.value === currentTypeId) {
+                                option.selected = true;
+                                break;
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    cancerTypeSelect.innerHTML = '<option value="">Error loading subtypes</option>';
+                });
+        });
+    }
+    
+    // Auto-trigger organ change if an organ is already selected
+    if (cancerOrganSelect && cancerOrganSelect.value) {
+        // Get current cancer type ID for auto-selection after loading subtypes
+        let currentTypeId = null;
+        const currentCancerTypeInput = document.querySelector('input[name="current_cancer_type"]');
+        if (currentCancerTypeInput && currentCancerTypeInput.value) {
+            currentTypeId = currentCancerTypeInput.value;
+        }
+        
+        // Manually fetch subtypes with the current organ ID
+        const organId = cancerOrganSelect.value;
+        fetch('/medical/get_subtypes/?organ_id=' + organId)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text();
+            })
+            .then(html => {
+                if (cancerTypeSelect) {
+                    cancerTypeSelect.innerHTML = html;
+                    
+                    // Auto-select the current cancer type if we have it
+                    if (currentTypeId) {
+                        const options = cancerTypeSelect.querySelectorAll('option');
+                        for (let option of options) {
+                            if (option.value === currentTypeId) {
+                                option.selected = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                // Dispatch change event as fallback
+                setTimeout(() => {
+                    const changeEvent = new Event('change');
+                    cancerOrganSelect.dispatchEvent(changeEvent);
+                }, 100);
+            });
+    }
+});
+</script>

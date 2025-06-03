@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Review Document" %} | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pdf-preview {
+        width: 100%;
+        height: 600px;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+    }
+    .ai-badge {
+        background-color: #93c5fd;
+        color: #1e40af;
+        padding: 0.125rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen pb-12">
+    <!-- Header Section -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div>
+                <h1 class="text-2xl font-semibold text-gray-900">{% trans "Review Document" %}</h1>
+                <p class="mt-1 text-sm text-gray-500">
+                    {% trans "Review and adjust AI-generated information for this document" %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Left Column: Document Preview -->
+            <div>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">
+                            {% trans "Document Preview" %}
+                        </h3>
+                    </div>
+                    <div class="px-4 py-5 sm:p-6">
+                        {% if document_url %}
+                        <object data="{{ document_url }}" type="application/pdf" class="pdf-preview">
+                            <div class="flex items-center justify-center h-full bg-gray-100 rounded-lg">
+                                <div class="text-center">
+                                    <p class="text-gray-500">
+                                        {% trans "PDF preview not available" %}
+                                    </p>
+                                    <a href="{{ document_url }}" target="_blank" class="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                        {% trans "Open PDF" %}
+                                    </a>
+                                </div>
+                            </div>
+                        </object>
+                        {% else %}
+                        <div class="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                            <p class="text-gray-500">
+                                {% trans "Document preview not available" %}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if is_pathology_report and ai_analysis %}
+                <div class="mt-6 bg-white rounded-lg shadow overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">
+                            {% trans "Pathology Report Analysis" %} <span class="ai-badge">AI</span>
+                        </h3>
+                    </div>
+                    <div class="px-4 py-5 sm:p-6">
+                        <dl class="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-1">
+                            <div class="sm:col-span-1">
+                                <dt class="text-sm font-medium text-gray-500">
+                                    {% trans "Cancer Type" %}
+                                </dt>
+                                <dd class="mt-1 text-sm text-gray-900">
+                                    {{ ai_analysis.cancer_type|default:"Not detected" }}
+                                </dd>
+                                {% if document.cancer_type %}
+                                <dt class="mt-2 text-sm font-medium text-gray-500">
+                                    {% trans "Matched Cancer Type" %}
+                                </dt>
+                                <dd class="mt-1 text-sm text-gray-900 flex items-center">
+                                    {% if document.cancer_type.is_organ %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">Organ</span>
+                                        {{ document.cancer_type.name }}
+                                    {% else %}
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 mr-2">Subtype</span>
+                                        {{ document.cancer_type.name }} 
+                                        {% if document.cancer_type.parent %}
+                                        <span class="text-gray-500 ml-1">({{ document.cancer_type.parent.name }})</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </dd>
+                                {% endif %}
+                            </div>
+                            <div class="sm:col-span-1">
+                                <dt class="text-sm font-medium text-gray-500">
+                                    {% trans "FIGO Stage" %}
+                                </dt>
+                                <dd class="mt-1 text-sm text-gray-900">
+                                    {{ ai_analysis.figo_stage|default:"Not detected" }}
+                                </dd>
+                            </div>
+                            <div class="sm:col-span-1">
+                                <dt class="text-sm font-medium text-gray-500">
+                                    {% trans "Final Pathologic Stage" %}
+                                </dt>
+                                <dd class="mt-1 text-sm text-gray-900">
+                                    {{ ai_analysis.final_pathologic_stage|default:"Not detected"|striptags|safe }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Column: Document Details Form -->
+            <div>
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900">
+                            {% trans "Document Details" %} <span class="ai-badge">AI-Generated</span>
+                        </h3>
+                        <p class="mt-1 text-sm text-gray-500">
+                            {% trans "Review and adjust the AI-generated information before finalizing" %}
+                        </p>
+                    </div>
+                    <div id="document-review-form-container" class="px-4 py-5 sm:p-6">
+                        {% include "medical/partials/document_review_form.html" %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form to be used as a fallback for cancellation -->
+<form id="cancel-fallback-form" action="/medical/document/{{ document.id }}/review/" method="get" style="display: none;">
+    <input type="hidden" name="action" value="cancel">
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/ai_debug.js' %}"></script>
+<script>
+    /**
+     * Handle cancellation by redirecting to the cancel action endpoint
+     * which will delete the document and redirect to the patient page.
+     * 
+     * Includes multiple fallback approaches to ensure reliable cancellation.
+     */
+    function cancelReview() {
+        console.log('Cancel review initiated');
+
+        // Disable the form cancel button if it exists
+        const formCancelButton = document.getElementById('form-cancel-button');
+        if (formCancelButton) {
+            formCancelButton.disabled = true;
+            formCancelButton.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Cancelling...';
+            formCancelButton.classList.add('opacity-75', 'cursor-wait');
+        }
+        
+        const documentId = '{{ document.id }}';
+        const cancelUrl = `/medical/document/${documentId}/review/?action=cancel`;
+        
+        // Track which methods succeeded
+        let navigationAttempted = false;
+        
+        // Store the patient ID in case we need it for fallback navigation
+        const patientId = '{{ patient.id }}';
+        const patientUrl = `/medical/clinician/patient/${patientId}/`;
+
+        // Primary method: Use fetch API to make a GET request
+        fetch(cancelUrl, {
+            method: 'GET',
+            cache: 'no-cache',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            },
+            redirect: 'follow'
+        })
+        .then(response => {
+            // Mark navigation attempted regardless of response status
+            navigationAttempted = true;
+
+            if (response.redirected) {
+                // Follow the redirect if we received one
+                window.location.href = response.url;
+                return;
+            } else if (response.ok) {
+                // If we got a success response but no redirect,
+                // try to use window.location.replace to go to patient page
+                window.location.replace(patientUrl);
+                return;
+            } else if (response.status === 404) {
+                // If document was already deleted (404), go directly to patient page
+                console.log('Document already deleted, redirecting to patient page');
+                window.location.href = patientUrl;
+                return;
+            }
+
+            // For other response statuses, try fallback navigation
+            window.location.href = patientUrl;
+        })
+        .catch(error => {
+            console.warn('Fetch approach failed:', error);
+            // Go directly to the patient page on any errors
+            navigationAttempted = true;
+            window.location.href = patientUrl;
+        });
+        
+        // Fallback 1: After a short delay, navigate directly to patient page
+        setTimeout(() => {
+            if (!navigationAttempted) {
+                try {
+                    console.log('Using fallback 1: Direct navigation to patient page');
+                    navigationAttempted = true;
+                    // Skip the cancel endpoint and go directly to the patient page
+                    window.location.href = patientUrl;
+                } catch (e) {
+                    console.warn('Direct assignment to patient page failed:', e);
+                }
+            }
+        }, 100);
+
+        // Fallback 2: Try the cancel endpoint one more time via form submission
+        setTimeout(() => {
+            if (!navigationAttempted) {
+                try {
+                    console.log('Using fallback 2: Form submission to cancel endpoint');
+                    navigationAttempted = true;
+                    const form = document.getElementById('cancel-fallback-form');
+                    if (form) {
+                        form.submit();
+                    } else {
+                        // If form not found, go directly to patient page
+                        window.location.href = patientUrl;
+                    }
+                } catch (e) {
+                    console.warn('Form submission failed:', e);
+                    // Still try to go to patient page
+                    window.location.href = patientUrl;
+                }
+            }
+        }, 200);
+
+        // Fallback 3: Create a modal with links to both options
+        setTimeout(() => {
+            if (!navigationAttempted) {
+                console.log('Using fallback 3: Modal with both options');
+
+                // Restore the form cancel button if it exists
+                if (formCancelButton) {
+                    formCancelButton.disabled = false;
+                    formCancelButton.innerHTML = '<svg class="-ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg> Cancel & Delete Document';
+                    formCancelButton.classList.remove('opacity-75', 'cursor-wait');
+                }
+
+                // Create a modal with both options (delete document or just go back)
+                const fallbackMessage = document.createElement('div');
+                fallbackMessage.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50';
+                fallbackMessage.innerHTML = `
+                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-md">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">Navigation Options</h3>
+                        <p class="mb-4">Choose one of the following options:</p>
+
+                        <div class="space-y-3">
+                            <a href="${cancelUrl}" class="block w-full py-2 px-4 bg-red-600 text-white rounded text-center font-bold hover:bg-red-700">
+                                Try to Delete Document & Return
+                            </a>
+
+                            <a href="${patientUrl}" class="block w-full py-2 px-4 bg-blue-600 text-white rounded text-center font-bold hover:bg-blue-700">
+                                Return Without Deleting
+                            </a>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(fallbackMessage);
+            }
+        }, 300);
+        
+        // Return false to prevent any default link behavior
+        return false;
+    }
+
+    // Set up the page when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("Document review page loaded");
+        
+        // Remove any loading animations if present
+        const processingAnimation = document.getElementById('document-processing-animation');
+        if (processingAnimation) {
+            processingAnimation.classList.add('hidden');
+        }
+    });
+
+    // Also handle the beforeunload event to help with navigation
+    window.addEventListener('beforeunload', function(e) {
+        // Remove the confirmation dialog if user is navigating away
+        delete e['returnValue'];
+    });
+</script>
+{% endblock %}

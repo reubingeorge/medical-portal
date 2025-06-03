@@ -1,0 +1,91 @@
+# Django and related packages
+Django
+djangorestframework
+django-cors-headers
+django-redis
+django-axes  # Security - login throttling
+django-environ
+django-allauth  # For social auth and improved auth flows
+django-htmx  # HTMX integration
+whitenoise  # Static file serving
+
+# Database
+psycopg2-binary
+pgvector  # For vector embeddings
+
+# Authentication
+djangorestframework-simplejwt
+argon2-cffi  # Better password hashing
+
+# Production server
+gunicorn
+
+# Translation
+googletrans
+deep-translator
+langdetect>=1.0.9  # Language detection
+
+# RAG and AI
+langchain
+langchain-openai
+langchain-community
+langchain-postgres  # For PostgreSQL vector storage
+openai>=1.0.0  # OpenAI API client
+tiktoken  # For token counting
+
+# Document processing
+python-docx
+PyPDF2
+pypdf  # Modern PDF parser (used by PyPDFLoader)
+pdfminer.six  # For more advanced PDF text extraction
+pdfplumber>=0.10.0
+camelot-py>=0.11.0
+tabula-py>=2.8.0
+PyMuPDF>=1.23.0  # For PDF processing
+pycryptodome  # Required for handling encrypted PDFs
+cryptography  # Additional cryptography support
+
+# OCR and image processing
+paddlepaddle  # PaddlePaddle for OCR
+paddleocr  # PaddleOCR for text extraction
+Pillow>=10.0.0  # For image processing
+pytesseract>=0.3.10
+
+# Advanced RAG features
+sentence-transformers>=2.2.2
+transformers>=4.36.0
+nltk>=3.8.1
+spacy>=3.7.0
+rank-bm25>=0.2.2
+ms-marco-evaluator>=1.0.0
+textstat>=0.7.3  # Text analysis
+textblob>=0.18.0  # Text analysis
+
+# Performance optimization
+numpy>=1.24.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+
+# Cache and async
+redis>=5.0.0
+hiredis>=2.3.0
+aioredis>=2.0.1
+asyncio>=3.4.3
+
+# Monitoring and metrics
+prometheus-client>=0.19.0
+
+# Testing
+pytest
+pytest-django
+pytest-cov
+coverage
+pytest-asyncio>=0.21.0
+pytest-benchmark>=4.0.0
+
+# Security
+django-csp  # Content Security Policy
+bleach  # Sanitize HTML
+
+# Utilities
+python-decouple

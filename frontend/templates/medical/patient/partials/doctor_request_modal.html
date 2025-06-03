@@ -1,0 +1,142 @@
+{% load i18n %}
+
+<!-- Doctor Assignment Request Modal -->
+<style>
+    /* HTMX Indicator styles */
+    .htmx-indicator {
+        display: none;
+    }
+    .htmx-request .htmx-indicator {
+        display: flex;
+    }
+    .htmx-request.htmx-indicator {
+        display: flex;
+    }
+</style>
+
+<div id="doctorRequestModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+            <!-- Header -->
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
+                        <svg class="h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                            {% trans "Request Doctor Assignment" %}
+                        </h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500">
+                                {% trans "Select a doctor to request as your primary care physician. Your request will be reviewed by an administrator." %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and doctor list -->
+            <div class="bg-white px-4 py-3 sm:px-6">
+                {% if request_exists %}
+                    <div class="p-4 bg-blue-50 border border-blue-100 rounded-md">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-blue-800">{% trans "Request Already Pending" %}</h3>
+                                <div class="mt-2 text-sm text-blue-700">
+                                    <p>{% blocktrans with doctor_name=pending_request.doctor.get_full_name %}You already have a pending request for Dr. {{ doctor_name }}. Please wait for this request to be processed before making another request.{% endblocktrans %}</p>
+                                </div>
+                                <div class="mt-4">
+                                    <button type="button" onclick="closeModal()" class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                        {% trans "Close" %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="mb-4 relative">
+                        <div class="flex items-center border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <input type="text" name="q" id="doctor-search-input" placeholder="{% trans 'Search by name or specialty...' %}" 
+                                class="block w-full pl-10 pr-3 py-2 border-0 focus:outline-none focus:ring-0"
+                                hx-get="{% url 'medical:doctor_search' %}" 
+                                hx-target="#doctor-list" 
+                                hx-swap="innerHTML" 
+                                hx-trigger="keyup changed delay:300ms, search"
+                                hx-indicator="#search-indicator">
+                            <div id="search-indicator" class="htmx-indicator flex items-center pr-3">
+                                <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="mt-1 text-xs text-gray-500">{% trans "Type to search for doctors by name or specialty" %}</p>
+                    </div>
+                    
+                    <div id="doctor-list" class="max-h-80 overflow-y-auto">
+                        {% include "medical/patient/partials/doctor_list.html" with doctors=doctors page_obj=page_obj %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="closeModalBtn" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    {% trans "Cancel" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function closeModal() {
+        const modal = document.getElementById('doctorRequestModal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+    
+    function requestDoctor(doctorId) {
+        htmx.ajax('POST', "{% url 'medical:request_doctor_assignment' %}", {
+            target: '#doctor-list',
+            swap: 'innerHTML',
+            values: {
+                'doctor_id': doctorId,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            }
+        });
+    }
+    
+    // Close modal when clicking outside
+    document.addEventListener('click', function(event) {
+        const modal = document.getElementById('doctorRequestModal');
+        if (modal && event.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // Close modal with escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeModal();
+        }
+    });
+</script>

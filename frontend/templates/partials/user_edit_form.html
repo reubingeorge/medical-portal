@@ -1,0 +1,128 @@
+{% load i18n %}
+
+<form method="post" hx-post="{% url 'accounts:user_edit' user_to_edit.id %}" hx-target="#form-container">
+    {% csrf_token %}
+    
+    <!-- Personal Information -->
+    <h2 class="text-lg font-medium text-gray-900 mb-4">{% trans "Personal Information" %}</h2>
+    
+    <div class="form-row">
+        <!-- First Name -->
+        <div class="form-col form-col-2">
+            <div class="form-group">
+                <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                    {% trans "First Name" %}*
+                </label>
+                <input 
+                    type="text" 
+                    name="first_name" 
+                    id="{{ form.first_name.id_for_label }}" 
+                    value="{{ form.first_name.value|default:'' }}" 
+                    class="form-input" 
+                    required
+                >
+                {% if form.first_name.errors %}
+                <div class="form-error">{{ form.first_name.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Last Name -->
+        <div class="form-col form-col-2">
+            <div class="form-group">
+                <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                    {% trans "Last Name" %}*
+                </label>
+                <input 
+                    type="text" 
+                    name="last_name" 
+                    id="{{ form.last_name.id_for_label }}" 
+                    value="{{ form.last_name.value|default:'' }}" 
+                    class="form-input" 
+                    required
+                >
+                {% if form.last_name.errors %}
+                <div class="form-error">{{ form.last_name.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <!-- Phone Number -->
+        <div class="form-col form-col-2">
+            <div class="form-group">
+                <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                    {% trans "Phone Number" %}*
+                </label>
+                <input 
+                    type="tel" 
+                    name="phone_number" 
+                    id="{{ form.phone_number.id_for_label }}" 
+                    value="{{ form.phone_number.value|default:'' }}" 
+                    class="form-input" 
+                    required
+                >
+                {% if form.phone_number.errors %}
+                <div class="form-error">{{ form.phone_number.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Gender -->
+        <div class="form-col form-col-2">
+            <div class="form-group">
+                <label for="{{ form.gender.id_for_label }}" class="form-label">
+                    {% trans "Gender" %}*
+                </label>
+                <select 
+                    name="gender" 
+                    id="{{ form.gender.id_for_label }}" 
+                    class="form-select" 
+                    required
+                >
+                    {% for value, text in form.fields.gender.choices %}
+                    <option value="{{ value }}" {% if form.gender.value == value %}selected{% endif %}>
+                        {{ text }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.gender.errors %}
+                <div class="form-error">{{ form.gender.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Language -->
+    <div class="form-group">
+        <label for="{{ form.language.id_for_label }}" class="form-label">
+            {% trans "Preferred Language" %}
+        </label>
+        <select 
+            name="language" 
+            id="{{ form.language.id_for_label }}" 
+            class="form-select"
+        >
+            <option value="" {% if not user_to_edit.language %}selected{% endif %}>{% trans "No preference" %}</option>
+            <option value="en" {% if user_to_edit.language and user_to_edit.language.code == 'en' %}selected{% endif %}>{% trans "English" %}</option>
+            <option value="es" {% if user_to_edit.language and user_to_edit.language.code == 'es' %}selected{% endif %}>{% trans "Spanish" %}</option>
+            <option value="fr" {% if user_to_edit.language and user_to_edit.language.code == 'fr' %}selected{% endif %}>{% trans "French" %}</option>
+            <option value="ar" {% if user_to_edit.language and user_to_edit.language.code == 'ar' %}selected{% endif %}>{% trans "Arabic" %}</option>
+            <option value="hi" {% if user_to_edit.language and user_to_edit.language.code == 'hi' %}selected{% endif %}>{% trans "Hindi" %}</option>
+        </select>
+        {% if form.language.errors %}
+        <div class="form-error">{{ form.language.errors.0 }}</div>
+        {% endif %}
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="{% url 'accounts:user_list' %}" class="action-button secondary-button">
+            {% trans "Cancel" %}
+        </a>
+        <button type="submit" class="action-button primary-button">
+            {% trans "Save Changes" %}
+        </button>
+    </div>
+</form>

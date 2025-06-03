@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Chat" %}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/chat_new.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Chat Messages Area -->
+    <div id="chat-messages" class="chat-messages">
+        {% for message in messages %}
+            <div class="message message-{{ message.role }}">
+                <div class="message-avatar">
+                    {% if message.role == 'user' %}
+                        <span>U</span>
+                    {% else %}
+                        <span>AI</span>
+                    {% endif %}
+                </div>
+                <div class="message-content">
+                    {% if message.role == 'assistant' %}
+                        <div class="markdown-content">{{ message.content }}</div>
+                    {% else %}
+                        {{ message.content }}
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Chat Input Form -->
+    <form id="chat-form" class="chat-form">
+        {% csrf_token %}
+        <input type="text" name="message" id="chat-input" class="chat-input" placeholder="{% trans 'Type your message...' %}" autocomplete="off" required>
+        <button type="submit" class="chat-submit">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="{% static 'js/chat_fixed.js' %}"></script>
+{% endblock %}

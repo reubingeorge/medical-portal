@@ -1,0 +1,846 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Admin Dashboard" %} | {% trans "Medical Portal" %}{% endblock %}
+
+{% block meta_description %}{% trans "Administrative dashboard for the medical portal" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body {
+        height: 100%;
+        width: 100%;
+        overflow-x: hidden;
+    }
+    .admin-dashboard {
+        padding: 2rem 0;
+        max-width: 100%;
+        overflow-x: hidden;
+        position: relative;
+    }
+    .stats-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.2s ease-in-out;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .stats-heading {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4b5563;
+        margin-bottom: 0.5rem;
+    }
+    .stats-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+    }
+    .chart-container {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        max-width: 100%;
+        overflow: hidden;
+        min-height: 400px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    .action-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        flex-direction: column;
+    }
+    .action-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4b5563;
+        margin-bottom: 1rem;
+    }
+    .action-link {
+        margin-top: auto;
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        background-color: #2563eb;
+        color: white;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        text-align: center;
+        transition: background-color 0.2s ease-in-out;
+    }
+    .action-link:hover {
+        background-color: #1d4ed8;
+        color: white;
+    }
+    .user-list {
+        list-style: none;
+        padding: 0;
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .user-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .user-item:last-child {
+        border-bottom: none;
+    }
+    .user-avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        background-color: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: #4b5563;
+        margin-right: 1rem;
+    }
+    .user-info {
+        flex: 1;
+    }
+    .user-name {
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .user-role {
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+    .user-action {
+        color: #2563eb;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .status-pill {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .status-active {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+    .status-pending {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    .status-inactive {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="container mx-auto px-4" style="max-width: 1280px;">
+        <h1 class="text-3xl font-bold text-gray-900 mb-4">{% trans "Medical Administration Dashboard" %}</h1>
+
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="stats-card">
+                <div class="stats-heading">{% trans "Total Patients" %}</div>
+                <div class="stats-value">{{ patient_count }}</div>
+                <div class="text-sm text-gray-600">{% trans "Registered patients" %}</div>
+            </div>
+            
+            <div class="stats-card">
+                <div class="stats-heading">{% trans "Total Clinicians" %}</div>
+                <div class="stats-value">{{ clinician_count }}</div>
+                <div class="text-sm text-gray-600">{% trans "Active medical staff" %}</div>
+            </div>
+            
+            <div class="stats-card">
+                <div class="stats-heading">{% trans "Medical Records" %}</div>
+                <div class="stats-value">{{ record_count }}</div>
+                <div class="text-sm text-gray-600">{% trans "Total records in system" %}</div>
+            </div>
+            
+            <div class="stats-card">
+                <div class="stats-heading">{% trans "Active Chat Sessions" %}</div>
+                <div class="stats-value">{{ chat_session_count }}</div>
+                <div class="text-sm text-gray-600">{% trans "Last 24 hours" %}</div>
+            </div>
+        </div>
+        
+        <!-- Charts and Reports -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="chart-container">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">{% trans "Active Users by Role" %}</h2>
+                
+                <div style="flex-grow: 1; display: flex; flex-direction: column;">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Patients stats -->
+                        <div class="border rounded-lg p-4 text-center">
+                            <div class="text-blue-600 text-3xl font-bold mb-2">
+                                {{ patient_count }}
+                            </div>
+                            <div class="text-gray-700 font-medium">
+                                {% trans "Patients" %}
+                            </div>
+                        </div>
+                        
+                        <!-- Clinicians stats -->
+                        <div class="border rounded-lg p-4 text-center">
+                            <div class="text-green-600 text-3xl font-bold mb-2">
+                                {{ clinician_count }}
+                            </div>
+                            <div class="text-gray-700 font-medium">
+                                {% trans "Clinicians" %}
+                            </div>
+                        </div>
+                        
+                        <!-- Administrators stats -->
+                        <div class="border rounded-lg p-4 text-center">
+                            <div class="text-purple-600 text-3xl font-bold mb-2">
+                                {{ admin_count|default:"1" }}
+                            </div>
+                            <div class="text-gray-700 font-medium">
+                                {% trans "Administrators" %}
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class="mt-6">
+                        <h3 class="text-md font-medium text-gray-800 mb-3">{% trans "User Activity Status" %}</h3>
+                        <div class="h-10 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="flex h-full">
+                                <div class="bg-green-500 h-full" style="width: {{ active_percent }}%"></div>
+                                <div class="bg-yellow-500 h-full" style="width: {{ inactive_percent }}%"></div>
+                                <div class="bg-red-500 h-full" style="width: {{ suspended_percent }}%"></div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-600 mt-2">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
+                                <span>{% trans "Active" %} ({{ active_users }} - {{ active_percent }}%)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-yellow-500 mr-1"></div>
+                                <span>{% trans "Inactive" %} ({{ inactive_users }} - {{ inactive_percent }}%)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-red-500 mr-1"></div>
+                                <span>{% trans "Suspended" %} ({{ suspended_users }} - {{ suspended_percent }}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-right">
+                    <a href="{% url 'accounts:user_list' %}" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                        {% trans "Manage User Accounts" %} →
+                    </a>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">{% trans "Medical Records by Type" %}</h2>
+                <div style="flex-grow: 1; position: relative; width: 100%; height: 300px;">
+                    <canvas id="recordsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cancer Types Widget -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-4">{% trans "Organ Cancer Types in Database" %}</h2>
+            <div class="overflow-hidden">
+                {% if all_cancer_types %}
+                <!-- Top pagination controls -->
+                <div class="flex justify-between items-center mb-2">
+                    <div class="text-sm text-gray-600">
+                        {% trans "Showing" %}
+                        <span id="showing-start" class="font-medium">1</span>
+                        {% trans "to" %}
+                        <span id="showing-end" class="font-medium">{{ all_cancer_types|length }}</span>
+                        {% trans "of" %}
+                        <span id="showing-total" class="font-medium">{{ all_cancer_types|length }}</span>
+                        {% trans "entries" %}
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-600">{% trans "Rows per page:" %}</span>
+                        <select id="itemsPerPage" onchange="changeItemsPerPage(this.value)" class="border border-gray-300 rounded-md px-2 py-1 text-sm">
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="all">{% trans "All" %}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortOrgans('name')">
+                                    {% trans "Organ Type" %}
+                                    <span class="sort-indicator inline-block ml-1 opacity-50">↕</span>
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortOrgans('description')">
+                                    {% trans "Description" %}
+                                    <span class="sort-indicator inline-block ml-1 opacity-50">↕</span>
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortOrgans('patient_count')">
+                                    {% trans "Patient Count" %}
+                                    <span class="sort-indicator inline-block ml-1 opacity-50">↕</span>
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortOrgans('subtypes')">
+                                    {% trans "Subtypes" %}
+                                    <span class="sort-indicator inline-block ml-1 opacity-50">↕</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for cancer_type in all_cancer_types %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                                    {{ cancer_type.name }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500 truncate max-w-xs">
+                                    {{ cancer_type.description|default:"-"|truncatechars:80 }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                    <!-- Dynamic count with fallback -->
+                                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full {% if cancer_type.patient_count|default:cancer_type.get_patient_count|default:0 > 0 %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ cancer_type.patient_count|default:cancer_type.get_patient_count|default:"0" }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-center">
+                                    <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full {% if cancer_type.subtypes.count > 0 %}bg-blue-100 text-blue-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ cancer_type.subtypes.count }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bottom pagination controls -->
+                <div id="pagination-controls" class="my-4 flex justify-center">
+                    <!-- Pagination will be added by JavaScript -->
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-4">{% trans "No organ cancer types defined in the database." %}</p>
+                {% endif %}
+                <div class="mt-4 text-right">
+                    <a href="{% url 'medical:admin_cancer_types' %}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        {% trans "Manage Cancer Types" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="action-card">
+                <div class="action-title">{% trans "Upload Medical Documents" %}</div>
+                <p class="text-gray-600 mb-4">{% trans "Upload new medical reference documents for the AI assistant." %}</p>
+                <a href="{% url 'chat:admin_chat_documents' %}" class="action-link">{% trans "Manage Documents" %}</a>
+            </div>
+            
+            <div class="action-card">
+                <div class="action-title">{% trans "User Management" %}</div>
+                <p class="text-gray-600 mb-4">{% trans "Add, edit, or deactivate user accounts and set permissions." %}</p>
+                <a href="{% url 'accounts:user_list' %}" class="action-link">{% trans "Manage Users" %}</a>
+            </div>
+            
+            <div class="action-card">
+                <div class="action-title">{% trans "Audit Logs" %}</div>
+                <p class="text-gray-600 mb-4">{% trans "View system activity logs and security events." %}</p>
+                <a href="/audit/logs/" class="action-link">{% trans "View Logs" %}</a>
+            </div>
+        </div>
+        
+        <!-- Recent Activity -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">{% trans "Recent User Registrations" %}</h2>
+                
+                {% if recent_users %}
+                <ul class="user-list">
+                    {% for user in recent_users|slice:":10" %}
+                    <li class="user-item">
+                        <div class="user-avatar">{{ user.get_initials }}</div>
+                        <div class="user-info">
+                            <div class="user-name">{{ user.get_full_name }}</div>
+                            <div class="flex items-center">
+                                <div class="user-role mr-2">{{ user.get_role_display }}</div>
+                                {% if user.is_email_verified %}
+                                <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">{% trans "Verified" %}</span>
+                                {% else %}
+                                <span class="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">{% trans "Unverified" %}</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">{% trans "Joined" %}: {{ user.date_joined|date:_("M d, Y H:i") }}</div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <button 
+                                class="user-action mb-1 text-blue-600 hover:text-blue-800 cursor-pointer"
+                                hx-get="{% url 'medical:admin_user_modal' user.id %}"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                hx-trigger="click">
+                                {% trans "View" %}
+                            </button>
+                            <span class="text-xs text-gray-500">ID: {{ user.id }}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                
+                {% if recent_users.count > 10 %}
+                <div class="mt-4 text-center">
+                    <a href="{% url 'accounts:user_list' %}" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        {% trans "View All Users" %}
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-gray-600">{% trans "No recent user registrations." %}</p>
+                {% endif %}
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">{% trans "Pending Doctor Assignment Requests" %}</h2>
+                
+                <div id="pendingDoctorRequestsContainer">
+                    {% if pending_doctor_requests %}
+                    <ul class="divide-y divide-gray-200 mb-4">
+                        {% for request in pending_doctor_requests %}
+                        <li class="py-4" id="request-{{ request.id }}">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-medium text-gray-900">
+                                        {{ request.patient.get_full_name }} → {% trans "Dr." %} {{ request.doctor.get_full_name }}
+                                    </p>
+                                    <p class="text-xs text-gray-500">
+                                        {% trans "Requested" %}: {{ request.requested_at|date:"M d, Y H:i" }}
+                                    </p>
+                                </div>
+                                <button 
+                                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                    hx-get="{% url 'medical:process_doctor_request' request.id %}"
+                                    hx-target="body" 
+                                    hx-swap="beforeend">
+                                    {% trans "Process" %}
+                                </button>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <h3 class="mt-2 text-sm font-medium text-gray-900">{% trans "No Pending Requests" %}</h3>
+                        <p class="mt-1 text-sm text-gray-500">{% trans "There are no pending doctor assignment requests." %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">{% trans "System Status" %}</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-medium text-gray-900">{% trans "Database" %}</div>
+                                <div class="text-sm text-gray-600">{% trans "PostgreSQL Database" %}</div>
+                            </div>
+                            <span class="status-pill status-active">{% trans "Operational" %}</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-medium text-gray-900">{% trans "Redis Cache" %}</div>
+                                <div class="text-sm text-gray-600">{% trans "Session and Data Cache" %}</div>
+                            </div>
+                            <span class="status-pill status-active">{% trans "Operational" %}</span>
+                        </div>
+                        
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <div class="font-medium text-gray-900">{% trans "Vector Database" %}</div>
+                                <div class="text-sm text-gray-600">{% trans "PGVector Embeddings" %}</div>
+                            </div>
+                            <span class="status-pill status-active">{% trans "Operational" %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<!-- Removed admin_dashboard.js reference that was causing jQuery errors -->
+<!-- <script src="{% static 'js/admin_dashboard.js' %}"></script> -->
+
+<!-- Cancer Types dashboard table pagination functions -->
+<script>
+    // Remove server-side pagination variables as we're using client-side pagination
+    // Function is now only kept for potential future server-side implementation
+
+    // Function to update the dashboard cancer types table with current parameters (for future server-side pagination)
+    function updateDashboardTable() {
+        // Build the URL with parameters
+        const baseUrl = window.location.pathname;
+        const params = new URLSearchParams(window.location.search);
+
+        // Preserve any existing parameters that are not related to pagination
+        // Clean previous pagination parameters
+        params.delete('page');
+        params.delete('items_per_page');
+
+        // Add current parameters
+        params.set('page', currentPage);
+        params.set('items_per_page', itemsPerPage);
+
+        // Navigate to the updated URL
+        window.location.href = `${baseUrl}?${params.toString()}`;
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Records Chart
+        const recordsCtx = document.getElementById('recordsChart').getContext('2d');
+        const recordsChart = new Chart(recordsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ record_types|safe }},
+                datasets: [{
+                    data: {{ record_type_counts|safe }},
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(16, 185, 129, 0.7)',
+                        'rgba(245, 158, 11, 0.7)',
+                        'rgba(139, 92, 246, 0.7)',
+                        'rgba(236, 72, 153, 0.7)',
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: {
+                        top: 10,
+                        bottom: 20,
+                        left: 20,
+                        right: 20
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            boxWidth: 12,
+                            padding: 15,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+
+    // Function to handle organ cancer types table sorting
+    let currentSort = 'name';
+    let currentOrder = 'asc';
+    let allRows = []; // Store all rows for sorting and pagination
+
+    function sortOrgans(column) {
+        // Toggle sort order if clicking same column again
+        if (column === currentSort) {
+            currentOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort = column;
+            currentOrder = 'asc';
+        }
+
+        // Get the table and tbody
+        const table = document.querySelector('.min-w-full');
+        const tbody = table.querySelector('tbody');
+
+        // If allRows is empty, initialize it
+        if (allRows.length === 0) {
+            allRows = Array.from(tbody.querySelectorAll('tr'));
+        }
+
+        // Update sort indicators
+        const indicators = table.querySelectorAll('.sort-indicator');
+        indicators.forEach(indicator => {
+            indicator.textContent = '↕';
+            indicator.classList.add('opacity-50');
+        });
+
+        // Get the clicked column's indicator
+        const clickedHeader = table.querySelector(`th:nth-child(${getColumnIndex(column) + 1})`);
+        const clickedIndicator = clickedHeader.querySelector('.sort-indicator');
+        clickedIndicator.textContent = currentOrder === 'asc' ? '↑' : '↓';
+        clickedIndicator.classList.remove('opacity-50');
+
+        // Sort all rows
+        allRows.sort((a, b) => {
+            const cellA = a.querySelector(`td:nth-child(${getColumnIndex(column) + 1})`);
+            const cellB = b.querySelector(`td:nth-child(${getColumnIndex(column) + 1})`);
+            let valueA, valueB;
+
+            if (column === 'patient_count' || column === 'subtypes') {
+                // Extract numeric values from these columns
+                valueA = parseInt(cellA.textContent.trim(), 10) || 0;
+                valueB = parseInt(cellB.textContent.trim(), 10) || 0;
+            } else {
+                valueA = cellA.textContent.trim().toLowerCase();
+                valueB = cellB.textContent.trim().toLowerCase();
+            }
+
+            // Compare values based on sort order
+            if (currentOrder === 'asc') {
+                return valueA > valueB ? 1 : -1;
+            } else {
+                return valueA < valueB ? 1 : -1;
+            }
+        });
+
+        // Reset to first page after sorting
+        currentPage = 1;
+
+        // Re-apply pagination with sorted rows
+        applyPagination();
+        updatePaginationControls();
+    }
+
+    // Helper function to get column index
+    function getColumnIndex(column) {
+        switch (column) {
+            case 'name': return 0;
+            case 'description': return 1;
+            case 'patient_count': return 2;
+            case 'subtypes': return 3;
+            default: return 0;
+        }
+    }
+
+    // Client-side pagination variables
+    let currentPage = 1;
+    let itemsPerPage = 5;
+    let totalPages = 1;
+
+    // Initialize pagination when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initial pagination setup (after chart.js initialization)
+        setTimeout(function() {
+            // Get all rows
+            const table = document.querySelector('.min-w-full');
+            if (!table) return;
+
+            // Store all rows in our global variable
+            allRows = Array.from(table.querySelectorAll('tbody tr'));
+
+            // Calculate total pages based on rows count
+            totalPages = Math.ceil(allRows.length / itemsPerPage);
+
+            // Set up pagination
+            updatePaginationControls();
+
+            // Apply initial pagination
+            applyPagination();
+
+            // Set selected value in dropdown
+            const itemsPerPageSelect = document.getElementById('itemsPerPage');
+            if (itemsPerPageSelect) {
+                itemsPerPageSelect.value = itemsPerPage;
+            }
+        }, 100); // Small delay to ensure table is fully loaded
+    });
+
+    // Function to handle pagination
+    function goToPage(page) {
+        currentPage = parseInt(page);
+        applyPagination();
+        updatePaginationControls();
+        // Scroll to table top
+        document.querySelector('.min-w-full').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Function to handle changing items per page
+    function changeItemsPerPage(value) {
+        // Initialize allRows if empty
+        if (allRows.length === 0) {
+            const table = document.querySelector('.min-w-full');
+            allRows = Array.from(table.querySelectorAll('tbody tr'));
+        }
+
+        if (value === 'all') {
+            // Show all items
+            itemsPerPage = allRows.length;
+        } else {
+            itemsPerPage = parseInt(value);
+        }
+
+        // Reset to page 1
+        currentPage = 1;
+
+        // Recalculate total pages
+        totalPages = Math.ceil(allRows.length / itemsPerPage);
+
+        // Apply pagination
+        applyPagination();
+        updatePaginationControls();
+    }
+
+    // Function to apply pagination
+    function applyPagination() {
+        const table = document.querySelector('.min-w-full');
+        if (!table) return;
+
+        const tbody = table.querySelector('tbody');
+
+        // Initialize allRows if it's empty
+        if (allRows.length === 0) {
+            allRows = Array.from(tbody.querySelectorAll('tr'));
+        }
+
+        // Calculate start and end indices
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, allRows.length);
+
+        // Update showing X to Y of Z text
+        const startEl = document.getElementById('showing-start');
+        const endEl = document.getElementById('showing-end');
+        const totalEl = document.getElementById('showing-total');
+
+        if (startEl && endEl && totalEl) {
+            startEl.textContent = allRows.length > 0 ? startIndex + 1 : 0;
+            endEl.textContent = endIndex;
+            totalEl.textContent = allRows.length;
+        }
+
+        // Clear tbody
+        tbody.innerHTML = '';
+
+        // Add sorted and paginated rows to tbody
+        for (let i = startIndex; i < endIndex; i++) {
+            if (allRows[i]) {
+                tbody.appendChild(allRows[i].cloneNode(true));
+            }
+        }
+    }
+
+    // Function to update pagination controls
+    function updatePaginationControls() {
+        const paginationContainer = document.getElementById('pagination-controls');
+        if (!paginationContainer) return;
+
+        let html = '';
+
+        // Only show pagination if we have multiple pages
+        if (totalPages > 1) {
+            html += '<div class="flex items-center space-x-1" aria-label="Pagination">';
+
+            // Previous button
+            if (currentPage > 1) {
+                html += `<a href="javascript:void(0)" onclick="goToPage(${currentPage - 1})"
+                   class="px-3 py-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200 flex items-center"
+                   aria-label="Previous page">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </a>`;
+            } else {
+                html += `<span class="px-3 py-2 rounded-full text-gray-300 cursor-not-allowed" aria-disabled="true">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </span>`;
+            }
+
+            // Page numbers
+            html += '<div class="flex space-x-1">';
+
+            for (let i = 1; i <= totalPages; i++) {
+                // Only show page numbers close to current page
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    if (i === currentPage) {
+                        html += `<span class="px-3 py-1 rounded-full bg-blue-500 text-white font-medium">
+                            ${i}
+                        </span>`;
+                    } else {
+                        html += `<a href="javascript:void(0)" onclick="goToPage(${i})"
+                           class="px-3 py-1 rounded-full border border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200">
+                            ${i}
+                        </a>`;
+                    }
+                } else if ((i === currentPage - 3 || i === currentPage + 3) &&
+                          ((i > 1 && i < currentPage) || (i > currentPage && i < totalPages))) {
+                    html += '<span class="px-1 py-1 text-gray-500">...</span>';
+                }
+            }
+
+            html += '</div>';
+
+            // Next button
+            if (currentPage < totalPages) {
+                html += `<a href="javascript:void(0)" onclick="goToPage(${currentPage + 1})"
+                   class="px-3 py-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200 flex items-center"
+                   aria-label="Next page">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </a>`;
+            } else {
+                html += `<span class="px-3 py-2 rounded-full text-gray-300 cursor-not-allowed" aria-disabled="true">
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                </span>`;
+            }
+
+            html += '</div>';
+        }
+
+        paginationContainer.innerHTML = html;
+    }
+
+    // Function to handle closing user modal
+    window.closeUserModal = function() {
+        const modal = document.getElementById('userDetailModal');
+        if (modal) {
+            modal.remove();
+        }
+    };
+
+    // Close modal on escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeUserModal();
+        }
+    });
+</script>
+{% endblock %}

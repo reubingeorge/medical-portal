@@ -1,0 +1,13 @@
+{% load i18n %}
+
+<!-- User message -->
+<div class="message-row user">
+    <div class="avatar user">U</div>
+    <div class="message-bubble">{{ user_message }}</div>
+</div>
+
+<!-- Assistant message -->
+<div class="message-row ai">
+    <div class="avatar ai">AI</div>
+    <div class="message-bubble" data-markdown="true">{{ assistant_message }}</div>
+</div>

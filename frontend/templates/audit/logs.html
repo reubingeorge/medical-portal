@@ -1,0 +1,449 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Audit Logs" %} | {% trans "Medical Portal" %}{% endblock %}
+
+{% block meta_description %}{% trans "View system audit logs for the medical portal" %}{% endblock %}
+
+{% block extra_head %}
+    <!-- HTMX for dynamic content loading -->
+    <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+    <!-- Flatpickr for date range picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .logs-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .page-title {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 2rem;
+    }
+    .content-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    /* Filter panel */
+    .filter-panel {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .filter-label {
+        display: block;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    .filter-input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .filter-input:focus {
+        outline: 2px solid #3b82f6;
+        border-color: #3b82f6;
+    }
+    .filter-btn {
+        grid-column: span 1;
+        display: flex;
+        align-items: flex-end;
+    }
+    .date-range {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .date-range .filter-input {
+        width: calc(50% - 0.25rem);
+    }
+
+    /* Logs table */
+    .table-container {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .table th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        color: #6b7280;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        cursor: pointer;
+        user-select: none;
+    }
+    .table th:hover {
+        background-color: #f3f4f6;
+    }
+    .table th .sort-icon {
+        display: inline-block;
+        vertical-align: middle;
+        margin-left: 0.25rem;
+    }
+    .table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        color: #1f2937;
+        vertical-align: top;
+    }
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+    .table tr:hover {
+        background-color: #f9fafb;
+    }
+    .action-badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    .action-create {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+    .action-update {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+    .action-delete {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+    .action-login {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    .action-logout {
+        background-color: #f3f4f6;
+        color: #4b5563;
+    }
+    .changes-container {
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: #f9fafb;
+        padding: 0.5rem;
+        border-radius: 0.25rem;
+        font-family: monospace;
+    }
+    .changes-key {
+        font-weight: 500;
+        color: #4338ca;
+    }
+    .changes-old {
+        text-decoration: line-through;
+        color: #b91c1c;
+    }
+    .changes-new {
+        color: #15803d;
+    }
+
+    /* Pagination */
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    .rows-per-page {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .custom-select {
+        position: relative;
+        min-width: 80px;
+    }
+    .custom-select select {
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 0.5rem 2rem 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        background-color: white;
+        font-size: 0.875rem;
+        cursor: pointer;
+        width: 100%;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="logs-container">
+    <h1 class="page-title">{% trans "System Audit Logs" %}</h1>
+    
+    {% if request.GET.fix_users == '1' %}
+    <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-green-700">
+                    {% trans "User associations have been fixed where possible. Reload the page to see the updated logs." %}
+                </p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                    {% trans "Some logs may be missing user information. " %}
+                    <a href="?fix_users=1" class="font-medium underline text-yellow-700 hover:text-yellow-600">
+                        {% trans "Click here to fix missing user associations" %}
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="content-card">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">{% trans "Filter Logs" %}</h2>
+        
+        <form method="get" class="filter-panel">
+            <!-- Search input -->
+            <div>
+                <label for="search" class="filter-label">{% trans "Search" %}</label>
+                <input type="text" id="search" name="q" value="{{ search_query }}" placeholder="{% trans 'Search logs...' %}" class="filter-input">
+            </div>
+            
+            <!-- Model filter -->
+            <div>
+                <label for="model" class="filter-label">{% trans "Model" %}</label>
+                <select id="model" name="model" class="filter-input">
+                    <option value="">{% trans "All Models" %}</option>
+                    {% for model in model_names %}
+                    <option value="{{ model }}" {% if model_filter == model %}selected{% endif %}>{{ model }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Action filter -->
+            <div>
+                <label for="action" class="filter-label">{% trans "Action" %}</label>
+                <select id="action" name="action" class="filter-input">
+                    <option value="">{% trans "All Actions" %}</option>
+                    {% for action_code, action_label in action_choices %}
+                    <option value="{{ action_code }}" {% if action_filter == action_code %}selected{% endif %}>{{ action_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- User filter -->
+            <div>
+                <label for="user" class="filter-label">{% trans "User" %}</label>
+                <select id="user" name="user" class="filter-input">
+                    <option value="">{% trans "All Users" %}</option>
+                    {% for user in users_with_logs %}
+                    <option value="{{ user.id }}" {% if user_filter == user.id|stringformat:"s" %}selected{% endif %}>{{ user.get_full_name|default:user.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Date range filter -->
+            <div>
+                <label class="filter-label">{% trans "Date Range" %}</label>
+                <div class="date-range">
+                    <input type="date" id="start_date" name="start_date" value="{{ start_date }}" placeholder="{% trans 'From' %}" class="filter-input date-picker">
+                    <input type="date" id="end_date" name="end_date" value="{{ end_date }}" placeholder="{% trans 'To' %}" class="filter-input date-picker">
+                </div>
+            </div>
+            
+            <!-- Submit button -->
+            <div class="filter-btn">
+                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    {% trans "Apply Filters" %}
+                </button>
+            </div>
+            
+            <!-- Reset button -->
+            <div class="filter-btn">
+                <a href="/audit/logs/" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors text-center inline-block">
+                    {% trans "Reset" %}
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="content-card">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-gray-900">{% trans "Audit Logs" %}</h2>
+            
+            <div class="rows-per-page">
+                <span class="text-sm text-gray-600">{% trans "Rows per page:" %}</span>
+                <div class="custom-select">
+                    <select id="pageSize" name="size" 
+                            hx-get="/audit/logs/?{% if search_query and search_query != 'None' %}q={{ search_query }}{% endif %}{% if model_filter and model_filter != 'None' %}&model={{ model_filter }}{% endif %}{% if action_filter and action_filter != 'None' %}&action={{ action_filter }}{% endif %}{% if user_filter and user_filter != 'None' %}&user={{ user_filter }}{% endif %}{% if start_date and start_date != 'None' %}&start_date={{ start_date }}{% endif %}{% if end_date and end_date != 'None' %}&end_date={{ end_date }}{% endif %}{% if request.GET.fix_users %}&fix_users={{ request.GET.fix_users }}{% endif %}&size={value}"
+                            hx-trigger="change"
+                            hx-target="#logs-list-container"
+                            hx-swap="innerHTML">
+                        <option value="20" {% if items_per_page == 20 %}selected{% endif %}>20</option>
+                        <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
+                        <option value="100" {% if items_per_page == 100 %}selected{% endif %}>100</option>
+                        <option value="200" {% if items_per_page == 200 %}selected{% endif %}>200</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div id="logs-list-container">
+            {% include "audit/partials/logs_list.html" %}
+        </div>
+    </div>
+    
+    <!-- Back to Dashboard -->
+    <div class="mt-8 text-center">
+        <a href="/medical/admin/dashboard/" class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 inline-flex items-center justify-center w-full md:w-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {% trans "Back to Dashboard" %}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize date pickers
+        flatpickr(".date-picker", {
+            dateFormat: "Y-m-d",
+            allowInput: true
+        });
+        
+        // Format JSON changes for better display
+        document.querySelectorAll('.format-changes').forEach(function(element) {
+            try {
+                const changesData = JSON.parse(element.getAttribute('data-changes'));
+                if (!changesData) {
+                    element.innerHTML = '<em>{% trans "No changes" %}</em>';
+                    return;
+                }
+                
+                let formattedHtml = '';
+                
+                for (const [field, values] of Object.entries(changesData)) {
+                    formattedHtml += `<div class="mb-1">
+                        <span class="changes-key">${field}:</span> `;
+                    
+                    if (Array.isArray(values) && values.length === 2) {
+                        // Display old and new values
+                        const [oldValue, newValue] = values;
+                        formattedHtml += `<span class="changes-old">${oldValue !== null ? oldValue : 'null'}</span> → <span class="changes-new">${newValue !== null ? newValue : 'null'}</span>`;
+                    } else {
+                        // Just display the value
+                        formattedHtml += `<span>${JSON.stringify(values)}</span>`;
+                    }
+                    
+                    formattedHtml += '</div>';
+                }
+                
+                element.innerHTML = formattedHtml;
+            } catch (e) {
+                console.error('Error formatting changes:', e);
+                element.innerHTML = '<em>{% trans "Error formatting changes" %}</em>';
+            }
+        });
+    });
+
+    // Sorting function
+    function sortLogs(column) {
+        // Get the current sort parameters directly from the URL
+        const currentUrl = new URL(window.location);
+        const urlParams = new URLSearchParams(currentUrl.search);
+        
+        // Get current sort parameters, checking URL first, falling back to server-provided defaults
+        let currentSort = urlParams.get('sort') || '{{ sort_by }}';
+        let currentOrder = urlParams.get('order') || '{{ sort_order }}';
+        let newOrder = 'asc';
+        
+        console.log('BEFORE - Column:', column, 'Current sort:', currentSort, 'Current order:', currentOrder);
+        
+        // If already sorting by this column, toggle order
+        if (column === currentSort) {
+            newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            console.log('TOGGLING ORDER because column matches current sort');
+        } else {
+            console.log('NEW COLUMN selected, using default ascending order');
+        }
+        
+        console.log('AFTER - Column:', column, 'New order:', newOrder);
+        
+        // Build URL with all current parameters and add sorting
+        const url = new URL(window.location);
+        const params = new URLSearchParams(url.search);
+        
+        // Update or add sort parameters
+        params.set('sort', column);
+        params.set('order', newOrder);
+        
+        // Remove any 'None' values
+        for (const [key, value] of params.entries()) {
+            if (value === 'None') {
+                params.delete(key);
+            }
+        }
+        
+        // Ensure these parameters stay if they exist
+        if (!params.has('size') && '{{ items_per_page }}') {
+            params.set('size', '{{ items_per_page }}');
+        }
+        
+        if (!params.has('fix_users') && '{{ request.GET.fix_users }}') {
+            params.set('fix_users', '{{ request.GET.fix_users }}');
+        }
+        
+        // Update URL and make the request
+        url.search = params.toString();
+        
+        htmx.ajax('GET', url.toString(), {
+            target: '#logs-list-container',
+            swap: 'innerHTML'
+        });
+        
+        window.history.replaceState({}, '', url.toString());
+    }
+</script>
+{% endblock %}

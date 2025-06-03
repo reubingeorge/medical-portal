@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "User Management" %} | {% trans "Medical Portal" %}{% endblock %}
+
+{% block meta_description %}{% trans "Manage user accounts in the medical portal" %}{% endblock %}
+
+{% block extra_head %}
+<!-- Make sure CSRF token is available for HTMX DELETE requests -->
+<meta name="csrf-token" content="{{ csrf_token }}">
+<!-- Alpine.js will be used for the custom confirmation dialog -->
+<script src="https://unpkg.com/alpinejs@3.13.0" defer></script>
+<!-- Add x-cloak style in the head to prevent modal flash -->
+<style>
+    [x-cloak] { 
+        display: none !important; 
+    }
+</style>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .users-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .page-title {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 2rem;
+    }
+    .content-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .table-container {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .table {
+        width: 100%;
+        table-layout: auto;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .table th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        color: #6b7280;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        color: #1f2937;
+    }
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+    .action-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        text-align: center;
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+    }
+    .primary-button {
+        background-color: #2563eb;
+        color: white;
+    }
+    .primary-button:hover {
+        background-color: #1d4ed8;
+        color: white;
+    }
+    .secondary-button {
+        border: 1px solid #d1d5db;
+        background-color: white;
+        color: #374151;
+    }
+    .secondary-button:hover {
+        background-color: #f3f4f6;
+        color: #111827;
+    }
+    .danger-button {
+        background-color: #ef4444;
+        color: white;
+    }
+    .danger-button:hover {
+        background-color: #dc2626;
+        color: white;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .badge-success {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+    .badge-warning {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    .badge-danger {
+        background-color: #fee2e2;
+        color: #b91c1c;
+    }
+    .badge-info {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
+    .user-avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 9999px;
+        background-color: #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        color: #4b5563;
+    }
+    .filters-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        align-items: center;
+    }
+    .search-container {
+        flex-grow: 1;
+        max-width: 500px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+    }
+    .role-filter {
+        padding: 0.5rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+    }
+    /* Custom modal dialog styles */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+    }
+    .modal-container {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        max-width: 28rem;
+        overflow: hidden;
+        max-height: calc(100vh - 2rem);
+    }
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .modal-body {
+        padding: 1.5rem;
+        color: #4b5563;
+    }
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    
+    /* Animation for modals */
+    .modal-enter {
+        animation: modalFadeIn 0.2s ease-out forwards;
+    }
+    .modal-leave {
+        animation: modalFadeOut 0.2s ease-in forwards;
+    }
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    @keyframes modalFadeOut {
+        from {
+            opacity: 1;
+            transform: scale(1);
+        }
+        to {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="users-container">
+    <h1 class="page-title">{% trans "User Management" %}</h1>
+    
+    <!-- User Filters and Search -->
+    <div class="content-card">
+        <form method="get" action="{% url 'accounts:user_list' %}" class="filters-container">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    name="q" 
+                    placeholder="{% trans 'Search by name or email' %}"
+                    class="search-input"
+                    value="{{ search_query }}"
+                >
+            </div>
+            
+            <div>
+                <select name="role" class="role-filter">
+                    <option value="">{% trans "All Roles" %}</option>
+                    {% for role in roles %}
+                    <option value="{{ role.name }}" {% if role.name == role_filter %}selected{% endif %}>
+                        {{ role.display_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="action-button secondary-button">
+                {% trans "Filter" %}
+            </button>
+            
+            <a href="{% url 'accounts:user_list' %}" class="action-button secondary-button">
+                {% trans "Reset" %}
+            </a>
+        </form>
+    </div>
+    
+    <!-- Users List -->
+    <div class="content-card">
+        <div class="table-container">
+            {% if users %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>{% trans "User" %}</th>
+                        <th>{% trans "Email" %}</th>
+                        <th>{% trans "Role" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "Last Login" %}</th>
+                        <th class="text-center">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td class="align-middle">
+                            <div class="flex items-center">
+                                <div class="user-avatar">{{ user.get_initials }}</div>
+                                <div class="ml-3">
+                                    <div class="font-medium">{{ user.get_full_name }}</div>
+                                    <div class="text-sm text-gray-500">ID: {{ user.id }}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="align-middle">
+                            {{ user.email }}
+                        </td>
+                        <td class="align-middle">
+                            <span class="badge badge-info">
+                                {{ user.get_role_display }}
+                            </span>
+                        </td>
+                        <td class="align-middle">
+                            {% if user.is_active and user.is_email_verified %}
+                            <span class="badge badge-success">{% trans "Active" %}</span>
+                            {% elif user.is_active and not user.is_email_verified %}
+                            <span class="badge badge-warning">{% trans "Unverified" %}</span>
+                            {% else %}
+                            <span class="badge badge-danger">{% trans "Suspended" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="align-middle">
+                            {% if user.last_login %}
+                            {{ user.last_login|date:"M d, Y H:i" }}
+                            {% else %}
+                            <span class="text-gray-400">{% trans "Never" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center align-middle">
+                            <div class="flex space-x-2 justify-center">
+                                <a 
+                                    href="{% url 'accounts:user_edit' user.id %}" 
+                                    class="action-button secondary-button text-xs"
+                                >
+                                    {% trans "Edit" %}
+                                </a>
+                                
+                                {% if user.role.name == 'patient' and not user.assigned_doctor %}
+                                <a 
+                                    href="{% url 'accounts:assign_doctor' user.id %}" 
+                                    class="action-button secondary-button text-xs"
+                                >
+                                    {% trans "Assign Doctor" %}
+                                </a>
+                                {% endif %}
+                                
+                                {% if user.is_patient %}
+                                <a 
+                                    href="{% url 'medical:admin_patient_detail' user.id %}" 
+                                    class="action-button primary-button text-xs"
+                                >
+                                    {% trans "Details" %}
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty-state">
+                <p>{% trans "No users found matching your criteria." %}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Back to Dashboard -->
+    <div class="mt-8 text-center">
+        <a href="{% url 'medical:admin_dashboard' %}" class="action-button secondary-button">
+            {% trans "Back to Dashboard" %}
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Highlight the Users link in the header navigation
+        const navLinks = document.querySelectorAll('nav a');
+        navLinks.forEach(link => {
+            if (link.href.includes('users')) {
+                link.classList.add('text-blue-600', 'font-semibold');
+            }
+        });
+    });
+</script>
+{% endblock %}

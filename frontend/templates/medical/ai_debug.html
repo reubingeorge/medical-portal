@@ -1,0 +1,94 @@
+{% load i18n static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% trans "AI Debug View" %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        pre {
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .json-key {
+            color: #24292e;
+            font-weight: bold;
+        }
+        .json-string {
+            color: #032f62;
+        }
+        .json-number {
+            color: #005cc5;
+        }
+        .json-boolean {
+            color: #c92a2a;
+        }
+        .json-null {
+            color: #6a737d;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-4">{% trans "AI Processing Debug Information" %}</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-3">{% trans "AI Processing Results" %}</h2>
+            <div class="bg-gray-50 p-4 rounded overflow-auto">
+                <pre class="text-sm">{{ ai_processing_results|pprint }}</pre>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-3">{% trans "Cancer Type Matching" %}</h2>
+            <div class="bg-gray-50 p-4 rounded overflow-auto">
+                <pre class="text-sm">{{ cancer_type_matching|pprint }}</pre>
+            </div>
+        </div>
+        
+        <div class="mt-6">
+            <a href="javascript:history.back()" class="text-blue-600 hover:underline">← {% trans "Back" %}</a>
+        </div>
+    </div>
+
+    <script src="{% static 'js/ai_debug.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("=== AI DEBUG PAGE ===");
+            
+            // Log AI processing and cancer type matching
+            const aiData = {
+                {% if ai_processing_results %}
+                ai_processing_results: {{ ai_processing_results|safe }},
+                {% endif %}
+                {% if cancer_type_matching %}
+                cancer_type_matching: {{ cancer_type_matching|safe }}
+                {% endif %}
+            };
+            
+            // Log available AI data
+            if (aiData.ai_processing_results) {
+                logAIAnalysisResults("AI PROCESSING RESULTS", aiData.ai_processing_results);
+            } else {
+                console.log("AI Processing Results: None available");
+            }
+            
+            if (aiData.cancer_type_matching) {
+                console.group("=== CANCER TYPE MATCHING ===");
+                console.log(aiData.cancer_type_matching);
+                console.groupEnd();
+            } else {
+                console.log("Cancer Type Matching: None available");
+            }
+            
+            // Output all session data for comprehensive debugging
+            console.group("=== ALL SESSION DATA ===");
+            {% for key, value in request.session.items %}
+            {% if key != "csrf_token" and key != "messages" and key != "_auth_user_id" and key != "_auth_user_backend" and key != "_auth_user_hash" %}
+            console.log("Session[{{ key }}]:", {{ value|safe }});
+            {% endif %}
+            {% endfor %}
+            console.groupEnd();
+        });
+    </script>
+</body>
+</html>

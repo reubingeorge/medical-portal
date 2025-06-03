@@ -1,0 +1,35 @@
+{% load i18n %}
+
+<tr {% if just_added %}class="bg-green-50"{% endif %}>
+    <td class="font-medium">{{ cancer_type.name }}</td>
+    <td class="max-w-md truncate">{{ cancer_type.description|default:"-" }}</td>
+    <td>
+        <!-- HARD CODED VALUE: 0 -->
+        <span class="badge badge-info">
+            0
+        </span>
+    </td>
+    <td class="flex space-x-2">
+        <button 
+            class="action-button secondary-button text-xs"
+            hx-get="{% url 'medical:admin_cancer_types' %}?edit={{ cancer_type.id }}"
+            hx-target="#form-container"
+            hx-swap="innerHTML"
+        >
+            {% trans "Edit" %}
+        </button>
+        
+        <!-- HARDCODED PATIENT COUNT CONDITION -->
+        {% if True %}
+        <button 
+            class="action-button danger-button text-xs"
+            hx-delete="{% url 'medical:admin_cancer_types' %}?delete={{ cancer_type.id }}"
+            hx-confirm="{% trans 'Are you sure you want to delete this cancer type?' %}"
+            hx-target="closest tr"
+            hx-swap="outerHTML"
+        >
+            {% trans "Delete" %}
+        </button>
+        {% endif %}
+    </td>
+</tr>

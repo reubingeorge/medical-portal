@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "My Medical Documents" %} | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .document-card {
+        transition: all 0.3s ease;
+    }
+    .document-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .document-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    @media (min-width: 640px) {
+        .document-grid {
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+    }
+    .fade-in {
+        opacity: 0;
+        animation: fadeIn 0.5s ease forwards;
+    }
+    @keyframes fadeIn {
+        to { opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-gray-50 min-h-screen pb-12">
+    <!-- Header Section -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <h1 class="text-2xl font-semibold text-gray-900">{% trans "My Medical Documents" %}</h1>
+            <p class="mt-1 text-sm text-gray-500">
+                {% trans "View and download your medical documents" %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Search & Filters -->
+        <div class="bg-white shadow-sm rounded-lg p-4 mb-6">
+            <form method="get" action="{% url 'medical:patient_documents' %}" class="flex flex-col sm:flex-row gap-4">
+                <div class="flex-grow">
+                    <label for="search" class="sr-only">{% trans "Search documents" %}</label>
+                    <div class="relative rounded-md shadow-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input type="text" name="q" id="search" value="{{ search_query }}" 
+                               class="focus:ring-blue-500 focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md py-2" 
+                               placeholder="{% trans 'Search documents by title, type or description' %}">
+                    </div>
+                </div>
+                <div>
+                    <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        {% trans "Search" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Documents Grid -->
+        <div id="documents-container">
+            {% include "medical/patient/partials/document_list.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}

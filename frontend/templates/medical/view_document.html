@@ -1,0 +1,920 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "View Document" %} | {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Document layout and spacing */
+    .document-page {
+        background-color: #f3f4f6;
+    }
+
+    .page-content {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Header styling */
+    .document-header {
+        padding: 1rem 1.5rem;
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* Document viewer and related components */
+    .pdf-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        min-height: 620px;  /* Reduced to account for info below */
+        max-height: 650px;  /* Cap the height for better proportions */
+        border: 1px solid #e5e7eb;
+        background-color: white;
+        border-radius: 0.375rem 0.375rem 0 0; /* Rounded only at top since info is below */
+    }
+
+    #pdf-viewer {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #canvas-container {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        overflow-y: auto;
+        overflow-x: hidden;
+        width: 100%;
+        height: 100%;
+        background-color: #f9fafb;
+        padding: 1rem 0;
+        border-radius: 0 0 0.375rem 0.375rem;
+    }
+
+    #pdf-canvas {
+        max-width: 100%;
+        height: auto;
+        object-fit: contain;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.12);
+        border: 1px solid #e5e7eb;
+    }
+
+    /* Card styling with consistent spacing */
+    .info-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 1.25rem;
+        transition: all 0.2s ease;
+        border: 1px solid #f0f0f0;
+        overflow: hidden;
+        height: fit-content;
+    }
+
+    .info-card:hover {
+        box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+        border-color: #e5e7eb;
+    }
+
+    /* Fullscreen PDF viewer */
+    .pdf-fullscreen {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 50;
+        border-radius: 0 !important;
+        padding-bottom: 2rem;
+    }
+
+    /* Close button for fullscreen mode */
+    .fullscreen-close-btn {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 1px solid #ddd;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 60;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        transition: all 0.2s;
+    }
+
+    .fullscreen-close-btn:hover {
+        background-color: white;
+        transform: scale(1.1);
+    }
+
+    .pdf-fullscreen-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0,0,0,0.75);
+        z-index: 49;
+    }
+
+    .card-header {
+        padding: 0.875rem 1.25rem;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .card-section {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .card-section:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+
+    /* Labels and content with consistent spacing */
+    .field-label {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #4b5563;
+        margin-bottom: 0.375rem;
+        display: block;
+    }
+
+    .field-content {
+        font-size: 0.9375rem;
+        color: #1f2937;
+        line-height: 1.5;
+    }
+
+    /* Badge styling */
+    .ai-badge {
+        background-color: #93c5fd;
+        color: #1e40af;
+        padding: 0.25rem 0.625rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-left: 0.5rem;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .ai-badge::before {
+        content: '';
+        display: inline-block;
+        width: 0.5rem;
+        height: 0.5rem;
+        background-color: #3b82f6;
+        border-radius: 50%;
+        margin-right: 0.25rem;
+    }
+
+    .pathology-badge {
+        background-color: #fde68a;
+        color: #92400e;
+        padding: 0.25rem 0.625rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    /* Main grid layout */
+    .document-grid {
+        display: grid;
+        grid-template-columns: minmax(350px, 1fr) minmax(500px, 1.75fr);
+        gap: 2rem;
+        align-items: start; /* Prevent columns from stretching to equal height */
+    }
+
+    /* For smaller screens */
+    @media (max-width: 1023px) {
+        .document-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .document-grid > div:first-child {
+            order: 1; /* Keep analysis column first on mobile */
+        }
+
+        .document-grid > div:last-child {
+            order: 2; /* Show PDF after analysis on mobile */
+            margin-top: 1.5rem;
+        }
+    }
+
+    /* Button styles */
+    .action-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 0.375rem;
+        transition: all 0.2s;
+    }
+
+    .primary-button {
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+    }
+
+    .primary-button:hover {
+        background-color: #2563eb;
+    }
+
+    .secondary-button {
+        background-color: white;
+        color: #4b5563;
+        border: 1px solid #d1d5db;
+    }
+
+    .secondary-button:hover {
+        background-color: #f9fafb;
+        color: #1f2937;
+    }
+
+    /* Minor utility classes */
+    .timestamp {
+        color: #6b7280;
+        font-size: 0.75rem;
+    }
+
+    .section-divider {
+        height: 1px;
+        background-color: #e5e7eb;
+        margin: 1rem 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="document-page min-h-screen pb-8">
+    <!-- Header Section -->
+    <div class="document-header shadow-sm">
+        <div class="page-content px-4 sm:px-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-semibold text-gray-900 flex items-center flex-wrap gap-2">
+                        {{ document.title }}
+                        {% if document.is_pathology_report %}
+                        <span class="pathology-badge">{% trans "Pathology Report" %}</span>
+                        {% endif %}
+                    </h1>
+                    <p class="mt-1 text-sm text-gray-500">
+                        {% trans "Uploaded on" %}: {{ document.uploaded_at|date:"F j, Y" }}
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-3 justify-end">
+                    <a href="{{ document.file.url }}" target="_blank"
+                       class="action-button primary-button">
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        {% trans "Download" %}
+                    </a>
+
+                    {% if request.user.is_clinician or request.user.is_administrator %}
+                    <button id="edit-document-btn" type="button" data-document-id="{{ document.id }}"
+                       class="action-button secondary-button">
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        {% trans "Edit" %}
+                    </button>
+                    {% endif %}
+
+                    <a href="{% if request.user.is_clinician %}{% url 'medical:clinician_patient_detail' document.patient.id %}{% else %}{% url 'medical:admin_patient_detail' document.patient.id %}{% endif %}"
+                       class="action-button secondary-button">
+                        <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+                        </svg>
+                        {% trans "Back" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="page-content px-4 sm:px-6">
+        <div class="document-grid">
+            <!-- Left Column: Document Analysis -->
+            <div class="flex flex-col">
+
+                <!-- Document Analysis Container -->
+                <div class="info-card shadow-md border border-blue-100">
+                    <div class="card-header bg-gradient-to-r from-blue-50 to-white flex items-center">
+                        <h3 class="font-medium text-blue-700">{% trans "Document Analysis" %}</h3>
+                        <span class="ai-badge">AI</span>
+                    </div>
+
+                    <div class="card-body bg-white">
+                        {% if document.cancer_type %}
+                        <div class="card-section p-3 bg-blue-50 rounded-md mb-4">
+                            <div class="field-label text-blue-800 font-medium">{% trans "Cancer Type" %}</div>
+                            <div class="field-content p-1">
+                                {% if document.cancer_type.is_organ %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-800 mr-1">Organ</span>
+                                    <span class="text-green-900 font-medium">{{ document.cancer_type.name }}</span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-100 text-purple-800 mr-1">Subtype</span>
+                                    <span class="text-purple-900 font-medium">{{ document.cancer_type.name }}
+                                    {% if document.cancer_type.parent %}
+                                    <span class="text-gray-500">({{ document.cancer_type.parent.name }})</span>
+                                    {% endif %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Recommended Treatment moved to AI Analysis Results section -->
+
+                        <div class="card-section">
+                            <div class="field-label">{% trans "Description" %}</div>
+                            <div class="field-content">{{ document.description }}</div>
+                        </div>
+
+                        <div class="card-section">
+                            <div class="field-label">{% trans "Notes for Patient" %}</div>
+                            <div class="field-content">{{ document.patient_notes }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Analysis Card -->
+                {% if document.ai_analysis_json %}
+                <div class="info-card shadow-md border border-indigo-100">
+                    <div class="card-header bg-gradient-to-r from-indigo-50 to-white border-b border-indigo-200">
+                        <h3 class="font-medium text-indigo-900 flex items-center">
+                            {% trans "AI Analysis Results" %}
+                            <span class="ai-badge" style="background-color: #c7d2fe; color: #4338ca;">AI</span>
+                        </h3>
+                        {% if document.analysis_timestamp %}
+                        <p class="mt-1 text-sm text-indigo-700">
+                            {% trans "Analyzed on" %}: {{ document.analysis_timestamp|date:"F j, Y" }} at {{ document.analysis_timestamp|time:"g:i A" }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    <div class="card-body bg-white">
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            {% if document.ai_analysis_json.cancer_type %}
+                            <div class="bg-indigo-50 p-3 rounded-md border border-indigo-100">
+                                <div class="field-label text-indigo-800 font-medium">{% trans "Cancer Type" %}</div>
+                                <div class="field-content text-indigo-900">{{ document.ai_analysis_json.cancer_type }}</div>
+                            </div>
+                            {% endif %}
+
+                            {% if document.ai_analysis_json.figo_stage %}
+                            <div class="bg-indigo-50 p-3 rounded-md border border-indigo-100">
+                                <div class="field-label text-indigo-800 font-medium">{% trans "FIGO Stage" %}</div>
+                                <div class="field-content text-indigo-900">{{ document.ai_analysis_json.figo_stage }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if document.ai_analysis_json.final_pathologic_stage %}
+                        <div class="card-section p-3 bg-indigo-50 rounded-md mb-4 border border-indigo-100">
+                            <div class="field-label text-indigo-800 font-medium">{% trans "Final Pathologic Stage" %}</div>
+                            <div class="field-content text-indigo-900">{{ document.ai_analysis_json.final_pathologic_stage|striptags|safe }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if document.ai_analysis_json.recommended_treatment %}
+                        <div class="card-section p-3 bg-yellow-50 rounded-md mb-4 border-l-4 border-yellow-400">
+                            <div class="field-label text-yellow-800 font-medium flex items-center">
+                                {% trans "Recommended Treatment" %}
+                                <span class="inline-flex items-center ml-2 px-2 py-0.5 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    {% trans "NCCN Guidelines" %}
+                                </span>
+                            </div>
+                            <div class="field-content p-1 text-yellow-900">{{ document.ai_analysis_json.recommended_treatment|striptags|safe }}</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Right Column: PDF Display and Document Info -->
+            <div class="flex flex-col">
+                <!-- Combined PDF Preview and Document Information Card -->
+                <div class="info-card h-full flex flex-col shadow-md">
+                    <div class="card-header bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+                        <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                            {% trans "Document Preview" %}
+                            <span class="ml-3 text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">ID: {{ document.id|truncatechars:8 }}</span>
+                            <button id="expand-pdf-btn" class="ml-auto px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600 transition-colors" title="{% trans 'Toggle fullscreen' %}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
+                                </svg>
+                            </button>
+                        </h3>
+                    </div>
+
+                    <!-- PDF Viewer Section -->
+                    <div class="flex-grow">
+                        {% if document.file %}
+                        <div class="pdf-container">
+                            <!-- PDF viewer container -->
+                            <div id="pdf-viewer" data-pdf-url="{{ document.file.url }}" class="overflow-hidden"
+                                 data-document-title="{{ document.title }}">
+                                <!-- Content will be rendered by document_viewer.js -->
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="flex items-center justify-center h-64 bg-gray-100 w-full">
+                            <p class="text-gray-500">
+                                {% trans "Document preview not available" %}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Document Information Section -->
+                    <div class="border-t border-gray-200 bg-gray-50 pt-3 px-4 pb-4 rounded-b-lg">
+                        <h4 class="text-sm font-medium text-gray-700 mb-3">{% trans "Document Information" %}</h4>
+
+                        <div class="grid grid-cols-2 gap-4 mb-2">
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">{% trans "Title" %}</div>
+                                <div class="text-sm font-medium text-gray-900">{{ document.title }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">{% trans "Document Type" %}</div>
+                                <div class="text-sm text-gray-900">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                        {{ document.document_type }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">{% trans "Uploaded By" %}</div>
+                                <div class="text-sm text-gray-900">{{ document.uploaded_by.get_full_name }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs text-gray-500 mb-1">{% trans "Uploaded On" %}</div>
+                                <div class="text-sm text-gray-900">{{ document.uploaded_at|date:"F j, Y" }}</div>
+                            </div>
+                        </div>
+
+                        {% if document.language %}
+                        <div class="mt-2">
+                            <div class="text-xs text-gray-500 mb-1">{% trans "Language" %}</div>
+                            <div class="text-sm text-gray-900">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                                    {{ document.language }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+<!-- Modal will be created by the JavaScript -->
+
+{% block extra_js %}
+<script src="{% static 'js/fix_booleans.js' %}"></script>
+<script src="{% static 'js/ai_debug.js' %}"></script>
+<script src="{% static 'js/document_viewer.js' %}"></script>
+<script src="{% static 'js/modal_data_handler.js' %}"></script>
+<script src="{% static 'js/edit_modal.js' %}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("=== DOCUMENT VIEWING PAGE ===");
+
+        // Log data for debugging
+        {% if document %}
+        // Log document metadata
+        const documentData = {
+            id: "{{ document.id }}",
+            title: "{{ document.title|escapejs }}"
+        };
+        console.log("Document data:", documentData);
+        {% endif %}
+
+        // Fullscreen PDF functionality
+        const expandBtn = document.getElementById('expand-pdf-btn');
+        const pdfContainer = document.querySelector('.pdf-container');
+
+        if (expandBtn && pdfContainer) {
+            expandBtn.addEventListener('click', function() {
+                // Check if already in fullscreen
+                const isFullscreen = pdfContainer.classList.contains('pdf-fullscreen');
+
+                if (isFullscreen) {
+                    // Exit fullscreen
+                    pdfContainer.classList.remove('pdf-fullscreen');
+
+                    // Remove backdrop
+                    const backdrop = document.querySelector('.pdf-fullscreen-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+
+                    // Remove close button if it exists
+                    const closeBtn = document.querySelector('.fullscreen-close-btn');
+                    if (closeBtn) {
+                        closeBtn.remove();
+                    }
+
+                    // Remove ESC key event listener if it was added
+                    // (This is a best attempt, as we don't have a reference to the exact handler)
+                    document.removeEventListener('keydown', function(e) {
+                        if (e.key === 'Escape') { /* Do nothing, just for cleanup */ }
+                    });
+
+                    // Change icon to expand
+                    expandBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 1v4m0 0h-4m4 0l-5-5" />
+                        </svg>
+                    `;
+
+                    // Reset container height
+                    pdfContainer.style.minHeight = '620px';
+                    pdfContainer.style.maxHeight = '650px';
+                } else {
+                    // Enter fullscreen
+
+                    // Create backdrop
+                    const backdrop = document.createElement('div');
+                    backdrop.className = 'pdf-fullscreen-backdrop';
+                    document.body.appendChild(backdrop);
+
+                    // Create a visible close button
+                    const closeBtn = document.createElement('button');
+                    closeBtn.className = 'fullscreen-close-btn';
+                    closeBtn.setAttribute('title', 'Exit fullscreen (ESC)');
+                    closeBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    `;
+                    document.body.appendChild(closeBtn);
+
+                    // Activate fullscreen
+                    pdfContainer.classList.add('pdf-fullscreen');
+
+                    // Change icon to collapse
+                    expandBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    `;
+
+                    // Set container height to fill screen
+                    pdfContainer.style.minHeight = '100vh';
+                    pdfContainer.style.maxHeight = '100vh';
+
+                    // Add event listener to backdrop for closing
+                    backdrop.addEventListener('click', function() {
+                        expandBtn.click(); // Simulate click on expand button to exit
+                    });
+
+                    // Add event listener to close button
+                    closeBtn.addEventListener('click', function() {
+                        expandBtn.click(); // Simulate click on expand button to exit
+                    });
+
+                    // Add keyboard ESC key handling
+                    const escKeyHandler = function(e) {
+                        if (e.key === 'Escape') {
+                            // Remove the event listener first to avoid potential issues
+                            document.removeEventListener('keydown', escKeyHandler);
+                            // Exit fullscreen
+                            expandBtn.click();
+                        }
+                    };
+                    document.addEventListener('keydown', escKeyHandler);
+                }
+
+                // Rerender PDF for correct scaling
+                const pageNum = document.getElementById('page-num');
+                if (pageNum) {
+                    // Force redraw of current page
+                    const currentPage = parseInt(pageNum.textContent);
+                    if (!isNaN(currentPage)) {
+                        setTimeout(() => {
+                            // Try to find the internal render function from the global scope
+                            if (typeof window.queueRenderPage === 'function') {
+                                window.queueRenderPage(currentPage);
+                            }
+                        }, 100);
+                    }
+                }
+            });
+        }
+    });
+</script>
+
+<!-- Enhanced modal message handling script -->
+<script>
+/**
+ * Enhanced modal message handling for document editing
+ */
+function enhanceModalMessageHandling() {
+    console.log('Enhanced modal message handling initialized');
+
+    // Original flag to avoid responding to the iframe's initial load
+    let modalJustOpened = false;
+
+    // Store the current edit document ID to validate messages
+    let currentEditDocumentId = null;
+
+    // Check if we're in the modal's parent window (not in an iframe)
+    if (window !== window.parent) {
+        console.log('Not in parent window, skipping modal enhancement');
+        return;
+    }
+
+    // Enhanced message handler for modal iframe
+    window.addEventListener('message', function(event) {
+        console.log("Enhanced message received from iframe:", event.data);
+
+        // Ignore messages if we just opened the modal
+        if (modalJustOpened) {
+            console.log("Ignoring message as modal just opened");
+            return;
+        }
+
+        // Handle different types of messages
+        let jsonData = null;
+        try {
+            if (typeof event.data === 'string' && event.data.startsWith('{')) {
+                jsonData = JSON.parse(event.data);
+            }
+        } catch (e) {
+            console.error("Error parsing message as JSON:", e);
+        }
+
+        // Handle error messages
+        if (jsonData && jsonData.type === 'error') {
+            console.error("Error message received:", jsonData);
+
+            // Remove any existing indicators
+            const existingIndicator = document.getElementById('parent-saving-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+
+            // Show error message with retry option
+            const errorIndicator = document.createElement('div');
+            errorIndicator.id = 'save-error-indicator';
+            errorIndicator.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+
+            // Format error details if available
+            let errorDetails = '';
+            if (jsonData.details && jsonData.details.length > 0) {
+                errorDetails = '<ul class="text-left mt-4 bg-red-50 p-3 rounded text-sm">';
+                jsonData.details.forEach(failure => {
+                    errorDetails += `
+                        <li class="mb-2 pb-2 border-b border-red-200">
+                            <strong>Field:</strong> ${failure.field}<br>
+                            <strong>Submitted:</strong> ${failure.submitted}<br>
+                            <strong>Stored:</strong> ${failure.stored || 'Not saved'}
+                        </li>
+                    `;
+                });
+                errorDetails += '</ul>';
+            }
+
+            errorIndicator.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center max-w-lg">
+                    <div class="mx-auto mb-4 text-red-500 text-4xl">⚠</div>
+                    <p class="text-xl font-medium text-gray-800">${jsonData.message}</p>
+                    <p class="text-sm text-gray-500 mt-2">Please try editing the document again.</p>
+                    ${errorDetails}
+                    <div class="mt-6 flex justify-center space-x-4">
+                        <button id="retry-edit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                            Try Again
+                        </button>
+                        <button id="dismiss-error" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(errorIndicator);
+
+            // Add event listeners to buttons
+            setTimeout(() => {
+                const retryBtn = document.getElementById('retry-edit');
+                const dismissBtn = document.getElementById('dismiss-error');
+
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', function() {
+                        errorIndicator.remove();
+
+                        // Find and click the edit button again if we have a document ID
+                        if (currentEditDocumentId) {
+                            const editBtn = document.querySelector(`[data-document-id="${currentEditDocumentId}"]`);
+                            if (editBtn) {
+                                editBtn.click();
+                            }
+                        }
+                    });
+                }
+
+                if (dismissBtn) {
+                    dismissBtn.addEventListener('click', function() {
+                        errorIndicator.remove();
+                    });
+                }
+            }, 100);
+
+        } else if (event.data === 'document_saved') {
+            console.log("Document saved message received!");
+
+            // Show success message before reloading
+            const successIndicator = document.createElement('div');
+            successIndicator.id = 'save-success-indicator';
+            successIndicator.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            successIndicator.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+                    <div class="mx-auto mb-4 text-green-500 text-4xl">✓</div>
+                    <p class="text-xl font-medium text-gray-800">Changes saved!</p>
+                    <p class="text-sm text-gray-500 mt-2">Reloading page...</p>
+                </div>
+            `;
+            document.body.appendChild(successIndicator);
+
+            // Reload the page after a brief delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else if (event.data === 'document_saving') {
+            console.log("Document is being saved...");
+
+            // Show saving indicator with enhanced timeout handling
+            const savingIndicator = document.createElement('div');
+            savingIndicator.id = 'parent-saving-indicator';
+            savingIndicator.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+            savingIndicator.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p class="text-xl font-medium text-gray-800">Saving changes...</p>
+                    <p class="text-sm text-gray-500 mt-2">Verifying changes are saved to database...</p>
+                    <div class="mt-6 text-xs text-gray-400">
+                        <span class="countdown-timer">15</span> seconds remaining...
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(savingIndicator);
+
+            // Close the modal
+            const modal = document.getElementById('edit-document-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                setTimeout(() => {
+                    modal.remove(); // Remove from DOM completely
+                }, 100);
+            }
+
+            // Add a countdown timer
+            let countdown = 15;
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                const timerElement = document.querySelector('.countdown-timer');
+                if (timerElement) {
+                    timerElement.textContent = countdown;
+                }
+
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                }
+            }, 1000);
+
+            // Set a fallback in case the save message never comes
+            setTimeout(() => {
+                clearInterval(countdownInterval);
+
+                // Check if the indicator still exists
+                const indicator = document.getElementById('parent-saving-indicator');
+                if (indicator) {
+                    // Replace indicator with an error message
+                    indicator.innerHTML = `
+                        <div class="bg-white p-6 rounded-lg shadow-xl text-center">
+                            <div class="mx-auto mb-4 text-orange-500 text-4xl">⚠</div>
+                            <p class="text-xl font-medium text-gray-800">Verification Timeout</p>
+                            <p class="text-sm text-gray-500 mt-2">Unable to verify if changes were saved.</p>
+                            <div class="mt-6 flex justify-center space-x-4">
+                                <button id="continue-anyway" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                    Continue Anyway
+                                </button>
+                                <button id="try-edit-again" class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400">
+                                    Try Again
+                                </button>
+                            </div>
+                        </div>
+                    `;
+
+                    // Add event listeners to buttons
+                    setTimeout(() => {
+                        const continueBtn = document.getElementById('continue-anyway');
+                        const tryAgainBtn = document.getElementById('try-edit-again');
+
+                        if (continueBtn) {
+                            continueBtn.addEventListener('click', function() {
+                                window.location.reload();
+                            });
+                        }
+
+                        if (tryAgainBtn) {
+                            tryAgainBtn.addEventListener('click', function() {
+                                indicator.remove();
+
+                                // Find and click the edit button again if we have a document ID
+                                if (currentEditDocumentId) {
+                                    const editBtn = document.querySelector(`[data-document-id="${currentEditDocumentId}"]`);
+                                    if (editBtn) {
+                                        editBtn.click();
+                                    }
+                                }
+                            });
+                        }
+                    }, 100);
+                }
+            }, 15000); // 15 second timeout
+        } else if (event.data === 'close_modal') {
+            // Close modal on cancel
+            console.log("Closing modal on cancel");
+            const modal = document.getElementById('edit-document-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                setTimeout(() => {
+                    modal.remove(); // Remove from DOM completely
+                }, 100);
+            }
+        }
+    });
+
+    // Enhance the edit button click handler
+    document.addEventListener('click', function(e) {
+        // Check if the clicked element is an edit button or inside one
+        const editBtn = e.target.closest('#edit-document-btn');
+        if (editBtn) {
+            console.log('Enhanced edit button clicked');
+
+            // Set the flag to ignore iframe load messages
+            modalJustOpened = true;
+
+            // Get the document ID from the button's data attribute
+            currentEditDocumentId = editBtn.getAttribute('data-document-id');
+            if (!currentEditDocumentId) {
+                console.error('No document ID found on edit button');
+                return;
+            }
+
+            console.log('Editing document ID:', currentEditDocumentId);
+
+            // Clear the flag after a short delay (after iframe has loaded)
+            setTimeout(() => {
+                modalJustOpened = false;
+            }, 1500); // Increased delay to ensure iframe is fully loaded
+        }
+    });
+}
+
+// Call the enhancement function when the DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    enhanceModalMessageHandling();
+});
+</script>
+{% endblock %}

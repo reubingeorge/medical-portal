@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Chat" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/chat_new.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <!-- Sidebar -->
+    <aside class="chat-sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" 
+                    hx-post="{% url 'chat:create_session' %}" 
+                    hx-trigger="click"
+                    hx-swap="none"
+                    hx-on::after-request="window.location.reload()">
+                <svg class="icon-plus" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/>
+                </svg>
+                {% trans "New Chat" %}
+            </button>
+        </div>
+        
+        <div class="sessions-list">
+            {% if today_sessions %}
+            <div class="session-group">
+                <h3 class="session-group-title">{% trans "Today" %}</h3>
+                {% for session in today_sessions %}
+                <div class="session-item {% if session.id == current_session.id %}active{% endif %}" data-session-id="{{ session.id }}">
+                    <a href="{% url 'chat:chat_interface' %}?session={{ session.id }}" class="session-link">
+                        <svg class="icon-chat" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
+                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
+                        </svg>
+                        <span class="session-title" title="{{ session.title }}">{{ session.title|truncatechars:30 }}</span>
+                    </a>
+                    <div class="session-actions">
+                        <button class="action-btn rename-btn" 
+                                onclick="openRenameModal('{{ session.id }}', '{{ session.title|escapejs }}')"
+                                title="{% trans 'Rename' %}">
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete-btn" 
+                                onclick="openDeleteModal('{{ session.id }}', '{{ session.title|escapejs }}')"
+                                title="{% trans 'Delete' %}">
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if previous_sessions %}
+            <div class="session-group">
+                <h3 class="session-group-title">{% trans "Previous" %}</h3>
+                {% for session in previous_sessions %}
+                <div class="session-item {% if session.id == current_session.id %}active{% endif %}" data-session-id="{{ session.id }}">
+                    <a href="{% url 'chat:chat_interface' %}?session={{ session.id }}" class="session-link">
+                        <svg class="icon-chat" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
+                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
+                        </svg>
+                        <span class="session-title" title="{{ session.title }}">{{ session.title|truncatechars:30 }}</span>
+                    </a>
+                    <div class="session-actions">
+                        <button class="action-btn rename-btn" 
+                                onclick="openRenameModal('{{ session.id }}', '{{ session.title|escapejs }}')"
+                                title="{% trans 'Rename' %}">
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn delete-btn" 
+                                onclick="openDeleteModal('{{ session.id }}', '{{ session.title|escapejs }}')"
+                                title="{% trans 'Delete' %}">
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            {% if not today_sessions and not previous_sessions %}
+            <div class="empty-state">
+                <p>{% trans "No chats yet. Start a new conversation!" %}</p>
+            </div>
+            {% endif %}
+        </div>
+    </aside>
+    
+    <!-- Main Chat Area -->
+    <main class="chat-main">
+        <!-- Chat Header -->
+        <header class="chat-header">
+            <h1 class="chat-title">{{ current_session.title }}</h1>
+            <div class="header-actions">
+                <button class="header-btn" 
+                        onclick="openRenameModal('{{ current_session.id }}', '{{ current_session.title|escapejs }}')"
+                        title="{% trans 'Rename chat' %}">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Messages Container -->
+        <div class="messages-container" id="messages-container">
+            <div class="messages-wrapper">
+                {% for message in messages %}
+                <div class="message {% if message.role == 'user' %}message-user{% else %}message-ai{% endif %}">
+                    <div class="message-avatar">
+                        {% if message.role == 'user' %}
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
+                            </svg>
+                        {% else %}
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364z" clip-rule="evenodd"/>
+                            </svg>
+                        {% endif %}
+                    </div>
+                    <div class="message-content" data-markdown="{% if message.role == 'assistant' %}true{% else %}false{% endif %}">
+                        {{ message.content }}
+                    </div>
+                    <div class="message-actions">
+                        {% if message.role == 'assistant' %}
+                        <button class="message-action-btn" title="{% trans 'Copy' %}" onclick="copyMessage(this)">
+                            <svg fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                            </svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- Typing Indicator -->
+                <div id="typing-indicator" class="message message-ai" style="display: none;">
+                    <div class="message-avatar">
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M9.504 1.132a1 1 0 01.992 0l1.75 1a1 1 0 11-.992 1.736L10 3.152l-1.254.716a1 1 0 11-.992-1.736l1.75-1zM5.618 4.504a1 1 0 01-.372 1.364L5.016 6l.23.132a1 1 0 11-.992 1.736L4 7.723V8a1 1 0 01-2 0V6a.996.996 0 01.52-.878l1.734-.99a1 1 0 011.364.372zm8.764 0a1 1 0 011.364-.372l1.733.99A1.002 1.002 0 0118 6v2a1 1 0 11-2 0v-.277l-.254.145a1 1 0 11-.992-1.736l.23-.132-.23-.132a1 1 0 01-.372-1.364zm-7 4a1 1 0 011.364-.372L10 8.848l1.254-.716a1 1 0 11.992 1.736L11 10.58V12a1 1 0 11-2 0v-1.42l-1.246-.712a1 1 0 01-.372-1.364z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="typing-animation">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Input Area -->
+        <div class="input-container">
+            <form id="chat-form" 
+                  hx-post="{% url 'chat:chat_message' %}" 
+                  hx-target="#messages-container .messages-wrapper" 
+                  hx-swap="beforeend"
+                  hx-indicator="#typing-indicator">
+                {% csrf_token %}
+                <div class="input-group">
+                    <textarea 
+                        name="message" 
+                        id="message-input" 
+                        class="message-input" 
+                        placeholder="{% trans 'Type your message...' %}"
+                        rows="1"
+                        required></textarea>
+                    <button type="submit" class="send-button" disabled>
+                        <svg fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009.26 15.04a1 1 0 00-.987-1.993l-3.22.92 5.71-11.42 5.712 11.42-3.22-.92a1 1 0 00-.985 1.493l5 1.429a1 1 0 001.169-1.409l-7-14z"/>
+                        </svg>
+                    </button>
+                </div>
+            </form>
+            <div class="input-hints">
+                <span>{% trans "Press Enter to send, Shift+Enter for new line" %}</span>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Rename Modal -->
+<div id="rename-modal" class="modal" style="display: none;">
+    <div class="modal-backdrop" onclick="closeRenameModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>{% trans "Rename Chat" %}</h2>
+            <button class="modal-close" onclick="closeRenameModal()">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+        <form id="rename-form" onsubmit="renameChat(event)">
+            <div class="modal-body">
+                <input type="hidden" id="rename-session-id" value="">
+                <div class="form-group">
+                    <label for="rename-title">{% trans "New title" %}</label>
+                    <input type="text" id="rename-title" class="form-input" required>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeRenameModal()">{% trans "Cancel" %}</button>
+                <button type="submit" class="btn btn-primary">{% trans "Rename" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal" style="display: none;">
+    <div class="modal-backdrop" onclick="closeDeleteModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>{% trans "Delete Chat" %}</h2>
+            <button class="modal-close" onclick="closeDeleteModal()">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+            </button>
+        </div>
+        <form id="delete-form" onsubmit="deleteChat(event)">
+            <div class="modal-body">
+                <input type="hidden" id="delete-session-id" value="">
+                <p class="delete-warning">{% trans "Are you sure you want to delete" %} "<span id="delete-session-title"></span>"?</p>
+                <p class="delete-info">{% trans "This action cannot be undone." %}</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">{% trans "Cancel" %}</button>
+                <button type="submit" class="btn btn-danger">{% trans "Delete" %}</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="{% static 'js/chat_new.js' %}"></script>
+{% endblock %}

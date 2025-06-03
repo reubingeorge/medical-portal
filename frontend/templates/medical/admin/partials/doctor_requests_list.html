@@ -1,0 +1,35 @@
+{% load i18n %}
+
+{% if pending_doctor_requests %}
+<ul class="divide-y divide-gray-200 mb-4">
+    {% for request in pending_doctor_requests %}
+    <li class="py-4" id="request-{{ request.id }}">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-900">
+                    {{ request.patient.get_full_name }} → {% trans "Dr." %} {{ request.doctor.get_full_name }}
+                </p>
+                <p class="text-xs text-gray-500">
+                    {% trans "Requested" %}: {{ request.requested_at|date:"M d, Y H:i" }}
+                </p>
+            </div>
+            <button 
+                class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                hx-get="{% url 'medical:process_doctor_request' request.id %}"
+                hx-target="body" 
+                hx-swap="beforeend">
+                {% trans "Process" %}
+            </button>
+        </div>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<div class="text-center py-4">
+    <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900">{% trans "No Pending Requests" %}</h3>
+    <p class="mt-1 text-sm text-gray-500">{% trans "There are no pending doctor assignment requests." %}</p>
+</div>
+{% endif %}

@@ -1,0 +1,200 @@
+{% load i18n %}
+
+{% if page_obj.object_list %}
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th width="15%" onclick="sortLogs('timestamp')">
+                        {% trans "Timestamp" %}
+                        <span class="sort-icon">
+                            {% if sort_by == 'timestamp' %}
+                                {% if sort_order == 'asc' %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                                    </svg>
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                                    </svg>
+                                {% endif %}
+                            {% endif %}
+                        </span>
+                    </th>
+                    <th width="15%" onclick="sortLogs('user')">
+                        {% trans "User" %}
+                        <span class="sort-icon">
+                            {% if sort_by == 'user' %}
+                                {% if sort_order == 'asc' %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                                    </svg>
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                                    </svg>
+                                {% endif %}
+                            {% endif %}
+                        </span>
+                    </th>
+                    <th width="10%" onclick="sortLogs('action')">
+                        {% trans "Action" %}
+                        <span class="sort-icon">
+                            {% if sort_by == 'action' %}
+                                {% if sort_order == 'asc' %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                                    </svg>
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                                    </svg>
+                                {% endif %}
+                            {% endif %}
+                        </span>
+                    </th>
+                    <th width="15%" onclick="sortLogs('model_name')">
+                        {% trans "Model" %}
+                        <span class="sort-icon">
+                            {% if sort_by == 'model_name' %}
+                                {% if sort_order == 'asc' %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                                    </svg>
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                                    </svg>
+                                {% endif %}
+                            {% endif %}
+                        </span>
+                    </th>
+                    <th width="10%" onclick="sortLogs('object_id')">
+                        {% trans "Object ID" %}
+                        <span class="sort-icon">
+                            {% if sort_by == 'object_id' %}
+                                {% if sort_order == 'asc' %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                                    </svg>
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                                    </svg>
+                                {% endif %}
+                            {% endif %}
+                        </span>
+                    </th>
+                    <th width="35%">{% trans "Changes" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in page_obj.object_list %}
+                    <tr>
+                        <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                        <td>
+                            {% if log.user %}
+                                {{ log.user.get_full_name|default:log.user.email }}
+                            {% elif log.model_name == 'accounts.User' %}
+                                <span class="text-amber-600 italic">{% trans "Administrator" %}</span>
+                            {% elif 'admin@example.com' in log.changes|stringformat:"s" %}
+                                <span class="text-amber-600 italic">{% trans "Administrator" %}</span>
+                            {% else %}
+                                <span class="text-gray-500 italic">{% trans "System" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="action-badge action-{{ log.action|lower }}">
+                                {{ log.get_action_display }}
+                            </span>
+                        </td>
+                        <td>{{ log.model_name }}</td>
+                        <td>{{ log.object_id }}</td>
+                        <td>
+                            {% if log.changes %}
+                                <div class="changes-container">
+                                    <div class="format-changes" data-changes="{{ log.changes|stringformat:'s'|escapejs }}">
+                                        <em>{% trans "Loading changes..." %}</em>
+                                    </div>
+                                </div>
+                            {% elif log.action == 'CREATE' %}
+                                <em>{% trans "New record created" %}</em>
+                            {% elif log.action == 'DELETE' %}
+                                <em>{% trans "Record deleted" %}</em>
+                            {% elif log.action == 'LOGIN' %}
+                                <em>{% trans "User logged in" %}</em>
+                            {% elif log.action == 'LOGOUT' %}
+                                <em>{% trans "User logged out" %}</em>
+                            {% else %}
+                                <em>{% trans "No changes recorded" %}</em>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <div class="mt-4 flex items-center justify-between flex-wrap gap-3">
+            <div class="text-sm text-gray-700">
+                {% trans "Showing" %} {{ page_obj.start_index }} - {{ page_obj.end_index }} {% trans "of" %} {{ page_obj.paginator.count }} {% trans "entries" %}
+            </div>
+            
+            <div class="inline-flex gap-1">
+                <!-- Previous page -->
+                {% if page_obj.has_previous %}
+                    <a hx-get="/audit/logs/?{% if search_query and search_query != 'None' %}q={{ search_query }}{% endif %}{% if model_filter and model_filter != 'None' %}&model={{ model_filter }}{% endif %}{% if action_filter and action_filter != 'None' %}&action={{ action_filter }}{% endif %}{% if user_filter and user_filter != 'None' %}&user={{ user_filter }}{% endif %}{% if start_date and start_date != 'None' %}&start_date={{ start_date }}{% endif %}{% if end_date and end_date != 'None' %}&end_date={{ end_date }}{% endif %}{% if request.GET.fix_users %}&fix_users={{ request.GET.fix_users }}{% endif %}&size={{ items_per_page }}&page={{ page_obj.previous_page_number }}"
+                       hx-target="#logs-list-container"
+                       hx-swap="innerHTML"
+                       class="px-3 py-1 border border-gray-300 text-gray-700 bg-white rounded-l-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        &laquo;
+                    </a>
+                {% else %}
+                    <span class="px-3 py-1 border border-gray-300 text-gray-400 bg-gray-100 rounded-l-md cursor-not-allowed">
+                        &laquo;
+                    </span>
+                {% endif %}
+                
+                <!-- Page numbers -->
+                {% for i in page_obj.paginator.page_range %}
+                    {% if page_obj.number == i %}
+                        <span class="px-3 py-1 border border-blue-500 text-white bg-blue-500 hover:bg-blue-600">
+                            {{ i }}
+                        </span>
+                    {% elif i > page_obj.number|add:"-3" and i < page_obj.number|add:"3" %}
+                        <a hx-get="/audit/logs/?{% if search_query and search_query != 'None' %}q={{ search_query }}{% endif %}{% if model_filter and model_filter != 'None' %}&model={{ model_filter }}{% endif %}{% if action_filter and action_filter != 'None' %}&action={{ action_filter }}{% endif %}{% if user_filter and user_filter != 'None' %}&user={{ user_filter }}{% endif %}{% if start_date and start_date != 'None' %}&start_date={{ start_date }}{% endif %}{% if end_date and end_date != 'None' %}&end_date={{ end_date }}{% endif %}{% if request.GET.fix_users %}&fix_users={{ request.GET.fix_users }}{% endif %}&size={{ items_per_page }}&page={{ i }}"
+                           hx-target="#logs-list-container"
+                           hx-swap="innerHTML"
+                           class="px-3 py-1 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            {{ i }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+                
+                <!-- Next page -->
+                {% if page_obj.has_next %}
+                    <a hx-get="/audit/logs/?{% if search_query and search_query != 'None' %}q={{ search_query }}{% endif %}{% if model_filter and model_filter != 'None' %}&model={{ model_filter }}{% endif %}{% if action_filter and action_filter != 'None' %}&action={{ action_filter }}{% endif %}{% if user_filter and user_filter != 'None' %}&user={{ user_filter }}{% endif %}{% if start_date and start_date != 'None' %}&start_date={{ start_date }}{% endif %}{% if end_date and end_date != 'None' %}&end_date={{ end_date }}{% endif %}{% if request.GET.fix_users %}&fix_users={{ request.GET.fix_users }}{% endif %}&size={{ items_per_page }}&page={{ page_obj.next_page_number }}"
+                       hx-target="#logs-list-container"
+                       hx-swap="innerHTML"
+                       class="px-3 py-1 border border-gray-300 text-gray-700 bg-white rounded-r-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        &raquo;
+                    </a>
+                {% else %}
+                    <span class="px-3 py-1 border border-gray-300 text-gray-400 bg-gray-100 rounded-r-md cursor-not-allowed">
+                        &raquo;
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p class="text-lg font-medium mb-2">{% trans "No logs found" %}</p>
+        <p class="text-gray-500">{% trans "Try adjusting your filters or search criteria." %}</p>
+    </div>
+{% endif %}

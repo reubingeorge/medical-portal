@@ -1,0 +1,13 @@
+{% load i18n %}
+<div class="message message-{{ role }}">
+    <div class="message-avatar">
+        <span>{% if role == 'user' %}U{% else %}AI{% endif %}</span>
+    </div>
+    <div class="message-content">
+        {% if role == 'assistant' %}
+            <div class="markdown-content">{{ content }}</div>
+        {% else %}
+            {{ content }}
+        {% endif %}
+    </div>
+</div>

@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Sign in" %} | {% trans "Medical Portal" %}{% endblock %}
+
+{% block meta_description %}{% trans "Sign in to access your secure patient portal" %}{% endblock %}
+
+{% block extra_head %}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+    <div class="animate-fade-in w-full max-w-md">
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-bold text-gray-900">
+                {% trans "Welcome back" %}
+            </h1>
+            <p class="mt-2 text-sm text-gray-600">
+                {% trans "Sign in to access your secure medical portal" %}
+            </p>
+        </div>
+
+        <!-- Card -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-8">
+                <!-- Login form -->
+                <div id="login-form-container">
+                    {% include "partials/login_form.html" %}
+                </div>
+
+                <!-- Divider -->
+                <div class="my-6 flex items-center">
+                    <div class="border-t border-gray-200 flex-grow"></div>
+                    <div class="mx-4 text-sm text-gray-500">{% trans "OR" %}</div>
+                    <div class="border-t border-gray-200 flex-grow"></div>
+                </div>
+
+                <!-- Sign up link -->
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">
+                        {% trans "Don't have an account?" %}
+                        <a href="{% url 'accounts:signup' %}" class="font-medium text-blue-600 hover:text-blue-500">
+                            {% trans "Sign up" %}
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Password reset link -->
+        <div class="text-center mt-4">
+            <a href="{% url 'accounts:password_reset' %}" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                {% trans "Forgot your password?" %}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Standard form submission (no HTMX)
+        var loginForm = document.getElementById('login-form');
+        
+        // Make sure CSRF token is available
+        function getCookie(name) {
+            var cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                var cookies = document.cookie.split(';');
+                for (var i = 0; i < cookies.length; i++) {
+                    var cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Update CSRF token in form before submission
+        if (loginForm) {
+            loginForm.addEventListener('submit', function(e) {
+                var csrftoken = getCookie('csrftoken');
+                if (csrftoken) {
+                    var csrfField = loginForm.querySelector('input[name="csrfmiddlewaretoken"]');
+                    if (csrfField) {
+                        csrfField.value = csrftoken;
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

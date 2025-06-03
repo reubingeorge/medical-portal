@@ -1,0 +1,758 @@
+{% load i18n %}
+
+<!-- Fixed properly structured modal dialog -->
+<div id="document-upload-modal" class="fixed z-50 inset-0 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 backdrop-blur-sm transition-opacity" onclick="closeAndResetModal()"></div>
+
+        <!-- Modal panel with animation -->
+        <div class="relative bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:max-w-lg sm:w-full">
+            <!-- Modal header with gradient background -->
+            <div class="bg-gradient-to-r from-blue-50 to-white px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                        {% trans "Upload Document for" %} {{ patient.get_full_name }}
+                    </h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" 
+                            onclick="closeAndResetModal()">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-white px-6 py-5">
+                <!-- Info message with icon -->
+                <div class="flex items-start space-x-3 mb-5 p-3 bg-blue-50 rounded-lg">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <p class="text-sm text-blue-800">
+                        {% trans "Upload a PDF document. AI will automatically analyze and extract important medical details." %}
+                    </p>
+                </div>
+                
+                <form method="post" action="{% if request.user.is_clinician %}{% url 'medical:clinician_upload_document' patient.id %}{% else %}{% url 'medical:admin_upload_document' patient.id %}{% endif %}" 
+                      enctype="multipart/form-data"
+                      hx-post="{% if request.user.is_clinician %}{% url 'medical:clinician_upload_document' patient.id %}{% else %}{% url 'medical:admin_upload_document' patient.id %}{% endif %}"
+                      hx-encoding="multipart/form-data"
+                      hx-indicator="#form-indicator"
+                      hx-swap="outerHTML"
+                      hx-target="#upload-response"
+                      hx-on::after-request="console.log('Form submitted, will handle modal closing separately')">
+                    
+                    {% csrf_token %}
+                    
+                    <!-- File field with improved styling -->
+                    <div class="mt-1">
+                        <label for="{{ form.file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {% trans "Select Document" %} *
+                        </label>
+                        <!-- Improved drop zone with hover effects -->
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-blue-300 border-dashed rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors duration-200 cursor-pointer group"
+                             id="file-drop-zone">
+                            <div class="space-y-2 text-center" id="file-upload-placeholder">
+                                <!-- PDF icon -->
+                                <svg class="mx-auto h-14 w-14 text-blue-500 group-hover:text-blue-600 transition-colors duration-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                
+                                <!-- Upload cloud icon -->
+                                <svg class="mx-auto h-6 w-6 text-blue-400 group-hover:text-blue-500 transition-colors duration-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                </svg>
+                                
+                                <div class="flex text-sm text-center justify-center">
+                                    <label class="relative cursor-pointer rounded-md font-medium text-blue-600 hover:text-blue-700 focus-within:outline-none">
+                                        <span class="px-2 py-1 rounded bg-white shadow-sm">{% trans "Browse Files" %}</span>
+                                        
+                                        <!-- File input with proper styling -->
+                                        <input type="file" name="{{ form.file.html_name }}" id="{{ form.file.auto_id }}" accept=".pdf" 
+                                               class="absolute top-0 left-0 opacity-0 w-full h-full cursor-pointer z-10">
+                                    </label>
+                                    <p class="pl-1 text-gray-600">{% trans "or drag and drop" %}</p>
+                                </div>
+                                <p class="text-xs text-gray-500">
+                                    {% trans "PDF files only, maximum 20MB" %}
+                                </p>
+                            </div>
+                            
+                            <!-- Selected file display - initially hidden - enhanced with animation -->
+                            <div id="selected-file-display" class="space-y-2 text-center hidden">
+                                <!-- Success animation container with pulse effect -->
+                                <div class="relative">
+                                    <!-- Animated success ring -->
+                                    <div class="absolute inset-0 rounded-full bg-green-100 animate-ping opacity-75" style="margin: -8px;"></div>
+                                    <!-- File icon with checkmark -->
+                                    <svg class="relative mx-auto h-14 w-14 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+
+                                <!-- Success message -->
+                                <div class="text-sm text-green-600 font-medium">{% trans "File selected" %}</div>
+
+                                <!-- File name display with highlight effect -->
+                                <div class="font-medium text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200 shadow-sm" id="selected-filename">filename.pdf</div>
+
+                                <!-- Change file button -->
+                                <div class="mt-2">
+                                    <button type="button" id="remove-file" class="text-sm text-blue-600 hover:text-blue-800 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition-colors duration-200">
+                                        {% trans "Choose a different file" %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% if form.file.errors %}
+                        <p class="mt-1 text-sm text-red-600 flex items-center">
+                            <svg class="h-4 w-4 mr-1 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            {{ form.file.errors.0 }}
+                        </p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- AI analysis information with icon -->
+                    <div class="mt-5 flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-600">
+                                {% trans "AI will analyze this document to extract:" %}
+                            </p>
+                            <ul class="mt-1 text-xs text-gray-600 list-disc list-inside">
+                                <li>{% trans "Cancer type and stage" %}</li>
+                                <li>{% trans "NCCN guideline-based treatment recommendations" %}</li>
+                                <li>{% trans "Patient-friendly explanations" %}</li>
+                            </ul>
+                            {% if request.user.is_administrator %}
+                            <a href="{% url 'medical:view_ai_debug' %}" class="mt-1 text-xs text-blue-600 hover:underline inline-flex items-center">
+                                <svg class="h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                </svg>
+                                {% trans "View AI Debug" %}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                            
+                    <!-- Action buttons with improved styling -->
+                    <div class="mt-8 flex items-center justify-end space-x-3">
+                        <button type="button" 
+                                class="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+                                id="cancel-upload-btn"
+                                onclick="closeAndResetModal()">
+                            {% trans "Cancel" %}
+                        </button>
+                        
+                        <button type="submit" 
+                                id="upload-analyze-btn" 
+                                class="inline-flex items-center justify-center rounded-md border border-transparent bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200">
+                            <!-- Normal state -->
+                            <span id="upload-text" class="inline-flex items-center">
+                                <svg class="mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                                </svg>
+                                {% trans "Upload & Analyze" %}
+                            </span>
+                            
+                            <!-- Loading state -->
+                            <span id="uploading-text" class="hidden inline-flex items-center">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {% trans "Processing..." %}
+                            </span>
+                        </button>
+                    </div>
+                    
+                    <!-- Better htmx loading indicator -->
+                    <div id="form-indicator" class="htmx-indicator fixed top-0 left-0 h-1.5 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 animate-pulse" style="transition: width 0.3s ease-out;"></div>
+                    
+                    <!-- Enhanced Document Processing Animation Overlay -->
+                    <div id="document-processing-animation" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" style="display: none;">
+                        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center animate-pulse">
+                            <div class="mx-auto mb-4">
+                                <!-- Simple spinner animation -->
+                                <svg class="animate-spin h-16 w-16 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </div>
+                            <div class="text-xl font-medium text-gray-800">{% trans "AI Analysis in Progress" %}</div>
+                            <div class="mt-2 text-lg text-gray-700">{% trans "Analyzing document" %}...</div>
+                            <div class="text-md text-gray-600 mt-3">{% trans "AI is extracting medical data from your document" %}</div>
+                            <div class="max-w-md mx-auto mt-5 pt-4 border-t border-gray-200">
+                                <div class="text-sm text-gray-500">{% trans "This process typically takes 20-30 seconds. Please don't close this window." %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden div for htmx response target -->
+<div id="upload-response" class="hidden"></div>
+
+<script>
+    // A better function to close only the current modal
+    function closeAndResetModal() {
+        console.log('Closing current modal properly');
+
+        // Find the current modal - the one that contains this code
+        const currentModal = document.getElementById('document-upload-modal');
+
+        if (currentModal) {
+            // Hide the current modal
+            currentModal.style.display = 'none';
+            console.log('Current modal hidden');
+
+            // Find the parent container
+            const modalContainer = document.getElementById('modal-container');
+            if (modalContainer) {
+                // Just hide the container, don't empty it yet
+                modalContainer.classList.add('hidden');
+                modalContainer.style.display = 'none';
+
+                // Use setTimeout to safely remove content after HTMX operations complete
+                setTimeout(() => {
+                    // Now we can safely empty the container
+                    modalContainer.innerHTML = '';
+                    console.log('Modal container safely emptied after delay');
+                }, 100);
+            }
+        }
+
+        // Notify the system but don't dispatch global events
+        console.log('Modal closed event');
+
+        return false; // Prevent default link behavior
+    }
+
+    // DIRECT INJECT GLOBAL HANDLERS
+    // This ensures the handlers are set up immediately without waiting for DOMContentLoaded
+    (function() {
+        // Prevent default browser behavior for drag events globally
+        window.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, true);
+
+        window.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, true);
+
+        // Also prevent at document level for older browsers
+        document.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, true);
+
+        document.addEventListener('drop', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }, true);
+    })();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Document loaded, setting up file drag and drop version 3.0');
+
+        // IMMEDIATE EXECUTION: Find and set up drop zone as soon as this script runs
+        (function setupImmediateDragDrop() {
+            const fileDropZone = document.getElementById('file-drop-zone');
+            const fileInput = document.querySelector('input[type="file"][accept=".pdf"]');
+
+            console.log('IMMEDIATE CHECK: Drop zone exists:', !!fileDropZone, 'File input exists:', !!fileInput);
+
+            if (fileDropZone && fileInput) {
+                console.log('SUCCESS: Found elements immediately, setting up handlers now');
+                setupAllHandlers(fileDropZone, fileInput);
+            } else {
+                console.log('Will try again with retry mechanism');
+            }
+        })();
+
+        // Regular initialization with retries
+        function initDragDrop() {
+            console.log('Running initialization with retries...');
+            const fileDropZone = document.getElementById('file-drop-zone');
+            // More flexible selector in case the ID is not rendered correctly
+            const fileInput = document.querySelector('input[type="file"][accept=".pdf"]') ||
+                              document.getElementById('{{ form.file.auto_id }}');
+
+            console.log('RETRY CHECK: Drop zone exists:', !!fileDropZone, 'File input exists:', !!fileInput);
+
+            if (!fileDropZone || !fileInput) {
+                console.log('Essential elements not found, retrying in 100ms');
+                setTimeout(initDragDrop, 100);
+                return;
+            }
+
+            console.log('Found file drop zone and input, setting up handlers through centralized function');
+
+            // Use our centralized function to set up all handlers
+            setupAllHandlers(fileDropZone, fileInput);
+
+            // All handlers are now centralized in the setupAllHandlers function
+            console.log('Using centralized handler setup - all previous handlers removed');
+        }
+
+        // Start initialization with slight delay
+        setTimeout(initDragDrop, 50);
+
+        // Form validation and processing animation
+        const form = document.querySelector('form[hx-encoding="multipart/form-data"]');
+        if (form) {
+            form.addEventListener('htmx:beforeRequest', function(event) {
+                // Validate file selection
+                const fileInput = document.getElementById('{{ form.file.auto_id }}');
+                const hasFile = (fileInput && fileInput.files && fileInput.files.length > 0) || window.droppedFile;
+
+                if (!hasFile) {
+                    event.preventDefault();
+                    alert('Please select a file before uploading.');
+                    return;
+                }
+
+                // Show loading state
+                const uploadBtn = document.getElementById('upload-analyze-btn');
+                const uploadText = document.getElementById('upload-text');
+                const uploadingText = document.getElementById('uploading-text');
+                const cancelBtn = document.getElementById('cancel-upload-btn');
+
+                if (uploadText && uploadingText) {
+                    uploadText.classList.add('hidden');
+                    uploadingText.classList.remove('hidden');
+                }
+
+                // Disable buttons
+                if (uploadBtn) uploadBtn.disabled = true;
+                if (cancelBtn) cancelBtn.disabled = true;
+
+                // Show processing animation
+                const animation = document.getElementById('document-processing-animation');
+                if (animation) {
+                    animation.classList.remove('hidden');
+                    animation.style.display = 'flex';
+                }
+            });
+
+            // Handle successful upload
+            form.addEventListener('htmx:afterRequest', function(event) {
+                if (event.detail.successful) {
+                    // Get document ID from response
+                    const uploadResponseDiv = document.getElementById('upload-response');
+                    let documentId = null;
+
+                    if (uploadResponseDiv && uploadResponseDiv.textContent) {
+                        try {
+                            const responseData = JSON.parse(uploadResponseDiv.textContent);
+                            documentId = responseData.document_id;
+                        } catch (e) {
+                            // Try regex extraction if not valid JSON
+                            const idMatch = uploadResponseDiv.textContent.match(/document\/([a-f0-9-]+)\/review/);
+                            if (idMatch && idMatch[1]) {
+                                documentId = idMatch[1];
+                            }
+                        }
+                    }
+
+                    // Close modal
+                    const currentModal = document.getElementById('document-upload-modal');
+                    if (currentModal) {
+                        currentModal.style.display = 'none';
+                    }
+
+                    // Navigate to document page or reload
+                    if (documentId) {
+                        window.location.href = `/medical/document/${documentId}/review/`;
+                    } else {
+                        window.location.reload();
+                    }
+                } else {
+                    // Reset UI on error
+                    const uploadBtn = document.getElementById('upload-analyze-btn');
+                    const uploadText = document.getElementById('upload-text');
+                    const uploadingText = document.getElementById('uploading-text');
+                    const cancelBtn = document.getElementById('cancel-upload-btn');
+                    const animation = document.getElementById('document-processing-animation');
+
+                    if (uploadText && uploadingText) {
+                        uploadText.classList.remove('hidden');
+                        uploadingText.classList.add('hidden');
+                    }
+
+                    if (uploadBtn) uploadBtn.disabled = false;
+                    if (cancelBtn) cancelBtn.disabled = false;
+                    if (animation) {
+                        animation.classList.add('hidden');
+                        animation.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        // For backward compatibility
+        window.closeAllModals = closeAndResetModal;
+
+        // Centralized handler setup function that can be called immediately or after retries
+        function setupAllHandlers(fileDropZone, fileInput) {
+            console.log('Setting up ALL handlers for', fileDropZone, fileInput);
+
+            // Direct event handlers for the drop zone
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                // Remove any existing handlers to prevent duplicates
+                const clone = fileDropZone.cloneNode(true);
+                fileDropZone.parentNode.replaceChild(clone, fileDropZone);
+                fileDropZone = clone;
+
+                // Now add the handlers again
+                console.log(`Adding ${eventName} handler to drop zone`);
+            });
+
+            // Dragenter - highlight the dropzone
+            fileDropZone.addEventListener('dragenter', function(e) {
+                console.log('DRAG ENTER EVENT FIRED!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('border-blue-500', 'bg-blue-100', 'border-2', 'shadow-lg');
+
+                // Add visual indicator
+                const placeholder = document.getElementById('file-upload-placeholder');
+                if (placeholder && !document.getElementById('drop-here-message')) {
+                    const dropMsg = document.createElement('div');
+                    dropMsg.id = 'drop-here-message';
+                    dropMsg.className = 'text-blue-600 font-medium text-lg animate-pulse';
+                    dropMsg.textContent = 'Drop PDF here';
+                    placeholder.insertBefore(dropMsg, placeholder.firstChild);
+                }
+            }, true);
+
+            // Dragover - maintain the highlight
+            fileDropZone.addEventListener('dragover', function(e) {
+                console.log('DRAG OVER EVENT FIRED!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.add('border-blue-500', 'bg-blue-100', 'border-2', 'shadow-lg');
+                return false;
+            }, true);
+
+            // Dragleave - remove highlight
+            fileDropZone.addEventListener('dragleave', function(e) {
+                console.log('DRAG LEAVE EVENT FIRED!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.classList.remove('border-blue-500', 'bg-blue-100', 'border-2', 'shadow-lg');
+
+                // Remove indicator
+                const dropMsg = document.getElementById('drop-here-message');
+                if (dropMsg) dropMsg.remove();
+            }, true);
+
+            // Drop - handle the file
+            fileDropZone.addEventListener('drop', function(e) {
+                console.log('DROP EVENT FIRED!', e);
+                e.preventDefault();
+                e.stopPropagation();
+
+                // Initially remove drag highlight
+                this.classList.remove('border-blue-500', 'bg-blue-100', 'border-2', 'shadow-lg');
+                const dropMsg = document.getElementById('drop-here-message');
+                if (dropMsg) dropMsg.remove();
+
+                console.log('DataTransfer:', e.dataTransfer);
+
+                // Get the dropped file
+                const dt = e.dataTransfer;
+                if (!dt || !dt.files || dt.files.length === 0) {
+                    console.error('No files in drop event!', dt);
+                    return false;
+                }
+
+                const file = dt.files[0];
+                console.log('File dropped:', file.name, 'Type:', file.type);
+
+                // Validate file type
+                if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+                    alert('Only PDF files are allowed');
+                    return false;
+                }
+
+                // Apply success highlight with animation
+                this.classList.add('border-green-500', 'border-2', 'bg-green-50');
+
+                // Create and show success toast notification
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-lg z-50 flex items-center animate-fade-in';
+                toast.innerHTML = `
+                    <svg class="h-6 w-6 text-green-500 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>File "${file.name}" ready to upload</span>
+                `;
+                document.body.appendChild(toast);
+
+                // Add animation style for toast
+                const style = document.createElement('style');
+                style.textContent = `
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(-20px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    @keyframes fadeOut {
+                        from { opacity: 1; transform: translateY(0); }
+                        to { opacity: 0; transform: translateY(-20px); }
+                    }
+                    .animate-fade-in {
+                        animation: fadeIn 0.3s ease-out forwards;
+                    }
+                    .animate-fade-out {
+                        animation: fadeOut 0.3s ease-out forwards;
+                    }
+                `;
+                document.head.appendChild(style);
+
+                // Auto remove toast after 5 seconds
+                setTimeout(() => {
+                    toast.classList.remove('animate-fade-in');
+                    toast.classList.add('animate-fade-out');
+                    setTimeout(() => toast.remove(), 300);
+                }, 5000);
+
+                // Also highlight the upload button
+                const uploadBtn = document.getElementById('upload-analyze-btn');
+                if (uploadBtn) {
+                    uploadBtn.classList.add('animate-pulse', 'ring-4', 'ring-green-300');
+                    setTimeout(() => {
+                        uploadBtn.classList.remove('animate-pulse', 'ring-4', 'ring-green-300');
+                    }, 3000);
+                }
+
+                console.log('Attempting to set file to file input...');
+
+                try {
+                    // UNIVERSAL APPROACH - Create a new FileList object
+                    // This approach doesn't rely on browser detection
+                    console.log('Using universal approach for dropped file');
+
+                    try {
+                        // Approach 1: Try DataTransfer API
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(file);
+                        fileInput.files = dataTransfer.files;
+                        console.log('DataTransfer API successful');
+                    } catch (err1) {
+                        console.error('DataTransfer API failed:', err1);
+
+                        try {
+                            // Approach 2: Try direct assignment
+                            fileInput.files = dt.files;
+                            console.log('Direct files assignment successful');
+                        } catch (err2) {
+                            console.error('Direct assignment failed:', err2);
+
+                            // Approach 3: Store in window and set up form interception
+                            console.log('Falling back to form interception approach');
+                            window.droppedFile = file;
+
+                            const form = fileInput.closest('form');
+                            if (form) {
+                                form.addEventListener('htmx:beforeRequest', function(evt) {
+                                    if (window.droppedFile) {
+                                        console.log('Adding dropped file to HTMX request');
+
+                                        const formData = new FormData();
+                                        new FormData(form).forEach((value, key) => {
+                                            if (key !== fileInput.name) {
+                                                formData.append(key, value);
+                                            }
+                                        });
+
+                                        formData.append(fileInput.name, window.droppedFile);
+                                        evt.detail.formData = formData;
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // Update UI regardless of approach to give visual feedback
+                    const filename = document.getElementById('selected-filename');
+                    const placeholder = document.getElementById('file-upload-placeholder');
+                    const display = document.getElementById('selected-file-display');
+
+                    if (filename && placeholder && display) {
+                        filename.textContent = file.name;
+
+                        // Fade out placeholder
+                        placeholder.style.transition = 'opacity 0.3s ease-out';
+                        placeholder.style.opacity = '0';
+
+                        // After fade out completes, hide placeholder and show file display
+                        setTimeout(() => {
+                            placeholder.classList.add('hidden');
+
+                            // Reset opacity for next time
+                            placeholder.style.opacity = '1';
+
+                            // Prepare display animation
+                            display.style.opacity = '0';
+                            display.style.transform = 'translateY(10px)';
+                            display.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                            display.classList.remove('hidden');
+
+                            // Trigger animation
+                            requestAnimationFrame(() => {
+                                display.style.opacity = '1';
+                                display.style.transform = 'translateY(0)';
+                            });
+                        }, 300);
+                    }
+
+                    // Trigger change event to ensure any other handlers run
+                    const event = new Event('change', { bubbles: true });
+                    fileInput.dispatchEvent(event);
+
+                } catch (mainError) {
+                    console.error('All approaches failed:', mainError);
+                    alert('Error handling file. Please use the browse button instead.');
+                }
+
+                return false;
+            }, true);
+
+            // Make sure the upload zone is clickable and triggers file input
+            fileDropZone.addEventListener('click', function(e) {
+                // Only trigger if we clicked directly on the zone, not on a button or input inside it
+                if (e.target === this ||
+                    !e.target.closest('button') &&
+                    !e.target.closest('input')) {
+                    fileInput.click();
+                }
+            });
+
+            // Be sure to also setup the file input change handler
+            fileInput.addEventListener('change', function() {
+                if (this.files && this.files.length > 0) {
+                    const fileName = this.files[0].name;
+                    console.log('File selected via input:', fileName);
+
+                    // Update UI with animation
+                    const filename = document.getElementById('selected-filename');
+                    const placeholder = document.getElementById('file-upload-placeholder');
+                    const display = document.getElementById('selected-file-display');
+                    const fileDropZone = document.getElementById('file-drop-zone');
+
+                    if (filename && placeholder && display) {
+                        // Set filename
+                        filename.textContent = fileName;
+
+                        // Apply green success border to the drop zone
+                        if (fileDropZone) {
+                            fileDropZone.classList.add('border-green-500', 'border-2', 'bg-green-50');
+                        }
+
+                        // Fade out placeholder
+                        placeholder.style.transition = 'opacity 0.3s ease-out';
+                        placeholder.style.opacity = '0';
+
+                        // After fade out completes, hide placeholder and show file display
+                        setTimeout(() => {
+                            placeholder.classList.add('hidden');
+
+                            // Reset opacity for next time
+                            placeholder.style.opacity = '1';
+
+                            // Prepare display animation
+                            display.style.opacity = '0';
+                            display.style.transform = 'translateY(10px)';
+                            display.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                            display.classList.remove('hidden');
+
+                            // Trigger animation
+                            requestAnimationFrame(() => {
+                                display.style.opacity = '1';
+                                display.style.transform = 'translateY(0)';
+                            });
+
+                            // Also highlight the upload button
+                            const uploadBtn = document.getElementById('upload-analyze-btn');
+                            if (uploadBtn) {
+                                uploadBtn.classList.add('animate-pulse', 'ring-4', 'ring-green-300');
+                                setTimeout(() => {
+                                    uploadBtn.classList.remove('animate-pulse', 'ring-4', 'ring-green-300');
+                                }, 3000);
+                            }
+                        }, 300);
+                    }
+                }
+            });
+
+            // Handle reset button
+            const resetButton = document.getElementById('remove-file');
+            if (resetButton) {
+                resetButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Reset input and global variable
+                    fileInput.value = '';
+                    window.droppedFile = null;
+
+                    // Reset UI with animation
+                    const placeholder = document.getElementById('file-upload-placeholder');
+                    const display = document.getElementById('selected-file-display');
+                    const fileDropZone = document.getElementById('file-drop-zone');
+
+                    if (placeholder && display) {
+                        // Remove success styling from drop zone
+                        if (fileDropZone) {
+                            fileDropZone.classList.remove('border-green-500', 'border-2', 'bg-green-50');
+                        }
+
+                        // Fade out the file display
+                        display.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                        display.style.opacity = '0';
+                        display.style.transform = 'translateY(10px)';
+
+                        // After fade out, switch displays
+                        setTimeout(() => {
+                            display.classList.add('hidden');
+
+                            // Prepare placeholder for animation
+                            placeholder.style.opacity = '0';
+                            placeholder.style.transform = 'translateY(-10px)';
+                            placeholder.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                            placeholder.classList.remove('hidden');
+
+                            // Trigger animation
+                            requestAnimationFrame(() => {
+                                placeholder.style.opacity = '1';
+                                placeholder.style.transform = 'translateY(0)';
+                            });
+                        }, 300);
+                    }
+                });
+            }
+        }
+
+        // Make the setup function globally available
+        window.setupDocumentUploadDragDrop = setupAllHandlers;
+    });
+</script>

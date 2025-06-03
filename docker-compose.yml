@@ -1,0 +1,62 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: medical_portal_web
+    command: ./docker/entrypoint.sh
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend:/app/frontend
+      - ./docker:/app/docker
+    ports:
+      - "8080:8000"
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - docker/${ENV_FILE:-dev.env}
+    networks:
+      - medical_network
+
+  db:
+    image: ankane/pgvector:latest
+    container_name: medical_portal_db
+    environment:
+      POSTGRES_DB: medical_portal
+      POSTGRES_USER: medical_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-medical_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - medical_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medical_user -d medical_portal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    container_name: medical_portal_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - medical_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  medical_network:
+    driver: bridge

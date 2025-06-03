@@ -1,0 +1,385 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Account Settings - Medical Portal{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow rounded-lg">
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex justify-between items-center">
+            <h1 class="text-2xl font-semibold text-gray-800">Account Settings</h1>
+            <a href="{% url 'patient:dashboard' %}" class="text-blue-600 hover:text-blue-800">
+                &larr; Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <div class="p-6">
+        <!-- Messages/Alerts -->
+        {% if messages %}
+        <div class="mb-6">
+            {% for message in messages %}
+            <div class="p-4 rounded-md {% if message.tags == 'success' %}bg-green-50{% elif message.tags == 'error' %}bg-red-50{% else %}bg-blue-50{% endif %} mb-3">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'success' %}
+                        <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                        </svg>
+                        {% elif message.tags == 'error' %}
+                        <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                        {% else %}
+                        <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                        {% endif %}
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium {% if message.tags == 'success' %}text-green-800{% elif message.tags == 'error' %}text-red-800{% else %}text-blue-800{% endif %}">
+                            {{ message }}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Settings Tabs -->
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex">
+                <a href="#profile" class="tab-link active whitespace-nowrap py-4 px-1 border-b-2 border-blue-500 font-medium text-sm text-blue-600 focus:outline-none mr-8" data-tab="profile">
+                    Profile Information
+                </a>
+                <a href="#password" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none mr-8" data-tab="password">
+                    Change Password
+                </a>
+                <a href="#notifications" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none mr-8" data-tab="notifications">
+                    Notification Preferences
+                </a>
+                <a href="#privacy" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 border-transparent font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300 focus:outline-none" data-tab="privacy">
+                    Privacy Settings
+                </a>
+            </nav>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="py-6">
+            <!-- Profile Information -->
+            <div id="profile" class="tab-content active">
+                <form method="post" action="{% url 'accounts:update_profile' %}" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
+                            <input type="text" name="first_name" id="first_name" value="{{ user.first_name }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
+                            <input type="text" name="last_name" id="last_name" value="{{ user.last_name }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">Email Address</label>
+                            <input type="email" name="email" id="email" value="{{ user.email }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input type="tel" name="phone" id="phone" value="{{ user.profile.phone|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                            <input type="date" name="date_of_birth" id="date_of_birth" value="{{ user.profile.date_of_birth|date:'Y-m-d'|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>
+                            <select name="gender" id="gender" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <option value="">Select Gender</option>
+                                <option value="male" {% if user.profile.gender == 'male' %}selected{% endif %}>Male</option>
+                                <option value="female" {% if user.profile.gender == 'female' %}selected{% endif %}>Female</option>
+                                <option value="other" {% if user.profile.gender == 'other' %}selected{% endif %}>Other</option>
+                                <option value="prefer_not_to_say" {% if user.profile.gender == 'prefer_not_to_say' %}selected{% endif %}>Prefer not to say</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="address" class="block text-sm font-medium text-gray-700">Address</label>
+                        <input type="text" name="address" id="address" value="{{ user.profile.address|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label for="city" class="block text-sm font-medium text-gray-700">City</label>
+                            <input type="text" name="city" id="city" value="{{ user.profile.city|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="state" class="block text-sm font-medium text-gray-700">State</label>
+                            <input type="text" name="state" id="state" value="{{ user.profile.state|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="zipcode" class="block text-sm font-medium text-gray-700">Zip Code</label>
+                            <input type="text" name="zipcode" id="zipcode" value="{{ user.profile.zipcode|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="emergency_contact" class="block text-sm font-medium text-gray-700">Emergency Contact</label>
+                        <input type="text" name="emergency_contact" id="emergency_contact" value="{{ user.profile.emergency_contact|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="emergency_phone" class="block text-sm font-medium text-gray-700">Emergency Contact Phone</label>
+                        <input type="tel" name="emergency_phone" id="emergency_phone" value="{{ user.profile.emergency_phone|default:'' }}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Change Password -->
+            <div id="password" class="tab-content hidden">
+                <form method="post" action="{% url 'accounts:change_password' %}" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div>
+                        <label for="current_password" class="block text-sm font-medium text-gray-700">Current Password</label>
+                        <input type="password" name="current_password" id="current_password" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="new_password" class="block text-sm font-medium text-gray-700">New Password</label>
+                        <input type="password" name="new_password" id="new_password" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <label for="confirm_password" class="block text-sm font-medium text-gray-700">Confirm New Password</label>
+                        <input type="password" name="confirm_password" id="confirm_password" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    </div>
+                    
+                    <div>
+                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Update Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Notification Preferences -->
+            <div id="notifications" class="tab-content hidden">
+                <form method="post" action="{% url 'accounts:update_notifications' %}" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-4">
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="email_appointments" name="email_appointments" type="checkbox" {% if user.notification_settings.email_appointments %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="email_appointments" class="font-medium text-gray-700">Appointment Reminders</label>
+                                <p class="text-gray-500">Receive email notifications about upcoming appointments</p>
+                            </div>
+                        </div>
+                        
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="email_results" name="email_results" type="checkbox" {% if user.notification_settings.email_results %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="email_results" class="font-medium text-gray-700">Test Results</label>
+                                <p class="text-gray-500">Receive email notifications when new test results are available</p>
+                            </div>
+                        </div>
+                        
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="email_messages" name="email_messages" type="checkbox" {% if user.notification_settings.email_messages %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="email_messages" class="font-medium text-gray-700">Messages</label>
+                                <p class="text-gray-500">Receive email notifications when you get a new message</p>
+                            </div>
+                        </div>
+                        
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="email_newsletters" name="email_newsletters" type="checkbox" {% if user.notification_settings.email_newsletters %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="email_newsletters" class="font-medium text-gray-700">Health Tips & Newsletters</label>
+                                <p class="text-gray-500">Receive periodic emails with health information and tips</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Preferences
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Privacy Settings -->
+            <div id="privacy" class="tab-content hidden">
+                <form method="post" action="{% url 'accounts:update_privacy' %}" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-medium text-gray-900">Data Sharing</h3>
+                        <p class="text-sm text-gray-500">Control how your medical information is shared</p>
+                        
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="share_with_providers" name="share_with_providers" type="checkbox" {% if user.privacy_settings.share_with_providers %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="share_with_providers" class="font-medium text-gray-700">Share with Healthcare Providers</label>
+                                <p class="text-gray-500">Allow sharing your medical history with other healthcare providers when necessary</p>
+                            </div>
+                        </div>
+                        
+                        <div class="relative flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="share_for_research" name="share_for_research" type="checkbox" {% if user.privacy_settings.share_for_research %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="share_for_research" class="font-medium text-gray-700">Share for Research</label>
+                                <p class="text-gray-500">Allow anonymized data to be used for medical research purposes</p>
+                            </div>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-gray-200">
+                            <h3 class="text-lg font-medium text-gray-900">Account Activity</h3>
+                            <p class="text-sm text-gray-500 mb-3">Manage your login and activity tracking</p>
+                            
+                            <div class="relative flex items-start">
+                                <div class="flex items-center h-5">
+                                    <input id="two_factor_auth" name="two_factor_auth" type="checkbox" {% if user.privacy_settings.two_factor_auth %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="two_factor_auth" class="font-medium text-gray-700">Two-Factor Authentication</label>
+                                    <p class="text-gray-500">Enable two-factor authentication for additional security</p>
+                                </div>
+                            </div>
+                            
+                            <div class="relative flex items-start mt-4">
+                                <div class="flex items-center h-5">
+                                    <input id="activity_tracking" name="activity_tracking" type="checkbox" {% if user.privacy_settings.activity_tracking %}checked{% endif %} class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded">
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    <label for="activity_tracking" class="font-medium text-gray-700">Activity Tracking</label>
+                                    <p class="text-gray-500">Track your login and activity history for security purposes</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            Save Privacy Settings
+                        </button>
+                    </div>
+                </form>
+                
+                <div class="pt-6 mt-6 border-t border-gray-200">
+                    <h3 class="text-lg font-medium text-red-600">Advanced Privacy Options</h3>
+                    <p class="text-sm text-gray-500 mt-1 mb-4">The following actions are permanent and cannot be undone</p>
+                    
+                    <div class="space-y-3">
+                        <button type="button" onclick="confirmAction('{% url 'accounts:download_data' %}')" class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg class="mr-2 -ml-1 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download My Data
+                        </button>
+                        
+                        <button type="button" onclick="confirmAction('{% url 'accounts:delete_account' %}', 'Are you sure you want to delete your account? This action cannot be undone.')" class="inline-flex items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <svg class="mr-2 -ml-1 h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete My Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Tab navigation logic
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabLinks = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all tabs
+                tabLinks.forEach(tab => {
+                    tab.classList.remove('active');
+                    tab.classList.remove('border-blue-500');
+                    tab.classList.remove('text-blue-600');
+                    tab.classList.add('border-transparent');
+                    tab.classList.add('text-gray-500');
+                });
+                
+                // Hide all tab contents
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                // Add active class to current tab
+                this.classList.add('active');
+                this.classList.add('border-blue-500');
+                this.classList.add('text-blue-600');
+                this.classList.remove('border-transparent');
+                this.classList.remove('text-gray-500');
+                
+                // Show current tab content
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.remove('hidden');
+            });
+        });
+        
+        // Check if URL has a hash and activate that tab
+        if (window.location.hash) {
+            const hash = window.location.hash.substring(1);
+            const tabLink = document.querySelector(`.tab-link[data-tab="${hash}"]`);
+            if (tabLink) {
+                tabLink.click();
+            }
+        }
+    });
+    
+    // Confirmation function for destructive actions
+    function confirmAction(url, message) {
+        if (!message) {
+            message = 'Are you sure you want to proceed?';
+        }
+        
+        if (confirm(message)) {
+            window.location.href = url;
+        }
+    }
+</script>
+{% endblock %}

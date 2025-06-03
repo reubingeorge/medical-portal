@@ -1,0 +1,117 @@
+{% load i18n %}
+
+<form method="post" action="{% url 'medical:clinician_edit_patient_record' patient.id %}" class="space-y-6"
+      id="record-form"
+      hx-post="{% url 'medical:clinician_edit_patient_record' patient.id %}"
+      hx-target="#record-form"
+      hx-swap="outerHTML">
+    {% csrf_token %}
+    
+    <!-- Diagnosis Information -->
+    <div class="form-section">
+        <h4 class="form-section-title">{% trans "Diagnosis Information" %}</h4>
+        
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- Cancer Organ Type -->
+            <div>
+                <label for="{{ form.cancer_organ.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.cancer_organ.label }}
+                </label>
+                {{ form.cancer_organ }}
+                <p class="mt-1 text-xs text-gray-500">{% trans "Primary organ affected by cancer" %}</p>
+            </div>
+            
+            <!-- Cancer Subtype -->
+            <div>
+                <label for="{{ form.cancer_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.cancer_type.label }}
+                </label>
+                {{ form.cancer_type }}
+                {% if form.cancer_type.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.cancer_type.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">{% trans "Specific type within the organ" %}</p>
+            </div>
+            
+            <!-- Cancer Stage (Text Input) -->
+            <div>
+                <label for="{{ form.cancer_stage_text.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.cancer_stage_text.label }}
+                </label>
+                {{ form.cancer_stage_text }}
+                {% if form.cancer_stage_text.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.cancer_stage_text.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">{% trans "E.g., Stage I, Stage II, etc." %}</p>
+            </div>
+            
+            <!-- Diagnosis Date -->
+            <div>
+                <label for="{{ form.diagnosis_date.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.diagnosis_date.label }}
+                </label>
+                {{ form.diagnosis_date }}
+                {% if form.diagnosis_date.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.diagnosis_date.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Stage Grouping -->
+            <div class="sm:col-span-2">
+                <label for="{{ form.stage_grouping.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.stage_grouping.label }}
+                </label>
+                {{ form.stage_grouping }}
+                {% if form.stage_grouping.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.stage_grouping.errors.0 }}</p>
+                {% endif %}
+                <p class="mt-1 text-xs text-gray-500">{% trans "Additional stage information like TNM classification" %}</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Treatment Information -->
+    <div class="form-section">
+        <h4 class="form-section-title">{% trans "Treatment & Notes" %}</h4>
+        
+        <div class="grid grid-cols-1 gap-6">
+            <!-- Recommended Treatment -->
+            <div>
+                <label for="{{ form.recommended_treatment.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.recommended_treatment.label }}
+                </label>
+                {{ form.recommended_treatment }}
+                {% if form.recommended_treatment.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.recommended_treatment.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <!-- Medical Notes -->
+            <div>
+                <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.notes.label }}
+                </label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="pt-5 border-t border-gray-200">
+        <div class="flex justify-end space-x-3">
+            <button type="button" class="inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onclick="this.closest('.modal').classList.add('hidden');">
+                {% trans "Cancel" %}
+            </button>
+            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                {% if medical_record.id %}
+                    {% trans "Update Record" %}
+                {% else %}
+                    {% trans "Create Record" %}
+                {% endif %}
+            </button>
+        </div>
+    </div>
+</form>

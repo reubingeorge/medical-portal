@@ -1,0 +1,6 @@
+{% load i18n %}
+
+<option value="">{% trans "Select a cancer subtype" %}</option>
+{% for subtype in subtypes %}
+    <option value="{{ subtype.id }}">{{ subtype.name }}</option>
+{% endfor %}

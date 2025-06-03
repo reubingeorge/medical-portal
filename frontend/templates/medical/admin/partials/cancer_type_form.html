@@ -1,0 +1,137 @@
+{% load i18n %}
+
+<div class="w-full bg-white rounded-lg shadow-md">
+    <!-- Form header with gradient background -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4 rounded-t-lg">
+        <h2 class="text-xl font-bold text-white">
+            {% if form.instance.pk %}
+            {% trans "Edit Cancer Type" %}
+            {% else %}
+            {% trans "Add New Cancer Type" %}
+            {% endif %}
+        </h2>
+    </div>
+
+    <!-- Form body with proper spacing and shadows -->
+    <div class="p-6">
+        <form method="post" hx-post="{% url 'medical:admin_cancer_types' %}" hx-target="#form-container" class="max-w-md mx-auto">
+            {% csrf_token %}
+
+            {% if form.instance.pk %}
+            <input type="hidden" name="id" value="{{ form.instance.pk }}">
+            {% endif %}
+
+            <!-- Name field with improved styling -->
+            <div class="mb-5">
+                <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {% trans "Name" %}<span class="text-red-500 ml-1">*</span>
+                </label>
+                <input type="text" name="name" id="{{ form.name.id_for_label }}" value="{{ form.instance.name|default:'' }}"
+                    class="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base" required>
+                {% if form.name.errors %}
+                <div class="mt-2 text-sm text-red-600 font-medium">{{ form.name.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Organ type checkbox with improved styling -->
+            <div class="mb-5 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                <div class="flex items-center mb-2">
+                    <input type="checkbox" name="is_organ" id="{{ form.is_organ.id_for_label }}"
+                        {% if form.instance.is_organ %}checked{% endif %}
+                        class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        onchange="toggleParentField(this.checked)">
+                    <label for="{{ form.is_organ.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-900">
+                        {% trans "This is an organ-level cancer type" %}
+                    </label>
+                </div>
+                {% if form.is_organ.errors %}
+                <div class="mt-1 text-sm text-red-600 font-medium">{{ form.is_organ.errors.0 }}</div>
+                {% endif %}
+                <p class="text-xs text-gray-500 mt-1 italic">{% trans "Organ-level types can have subtypes and are available for chat documents." %}</p>
+            </div>
+
+            <!-- Parent field with conditional display -->
+            <div class="mb-5" id="parent-field" {% if form.instance.is_organ %}style="display: none;"{% endif %}>
+                <label for="{{ form.parent.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {% trans "Parent Cancer Type" %}{% if not form.instance.is_organ %}<span class="text-red-500 ml-1">*</span>{% endif %}
+                </label>
+                <select name="parent" id="{{ form.parent.id_for_label }}"
+                    class="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base appearance-none bg-white bg-no-repeat bg-right pr-10"
+                    style="background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"6 9 12 15 18 9\"></polyline></svg>'); background-size: 1.25rem;"
+                    {% if not form.instance.is_organ and not form.initial.is_organ %}required{% endif %}>
+                    <option value="" {% if not form.instance.parent and not request.GET.parent %}selected{% endif %}>
+                        {% trans "Select a parent cancer type" %}
+                    </option>
+                    {% for parent in organ_cancer_types %}
+                    <option value="{{ parent.id }}" {% if form.instance.parent.id == parent.id or request.GET.parent|slugify == parent.id|slugify %}selected{% endif %}>
+                        {{ parent.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.parent.errors %}
+                <div class="mt-2 text-sm text-red-600 font-medium">{{ form.parent.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Description textarea with improved styling -->
+            <div class="mb-5">
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {% trans "Description" %}
+                </label>
+                <textarea name="description" id="{{ form.description.id_for_label }}" rows="4"
+                    class="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base">{{ form.instance.description|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <div class="mt-2 text-sm text-red-600 font-medium">{{ form.description.errors.0 }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Form actions with improved button styling -->
+            <div class="flex justify-end space-x-4 mt-8 pt-4 border-t border-gray-100">
+                <button
+                    type="button"
+                    class="px-5 py-2.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                    hx-get="{% url 'medical:admin_cancer_types' %}?form=0"
+                    hx-target="#form-container"
+                    hx-swap="innerHTML"
+                >
+                    {% trans "Cancel" %}
+                </button>
+
+                <button type="submit"
+                    class="px-5 py-2.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200">
+                    {% if form.instance.pk %}
+                    {% trans "Update Cancer Type" %}
+                    {% else %}
+                    {% trans "Add Cancer Type" %}
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Include the toggle function if loaded via HTMX -->
+{% if request.htmx %}
+<script>
+    // Function to toggle the parent field based on is_organ checkbox
+    function toggleParentField(isOrgan) {
+        const parentField = document.getElementById('parent-field');
+        const parentSelect = document.getElementById('id_parent');
+        
+        if (isOrgan) {
+            parentField.style.display = 'none';
+            parentSelect.required = false;
+            parentSelect.value = '';
+        } else {
+            parentField.style.display = 'block';
+            parentSelect.required = true;
+        }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        const isOrgan = document.getElementById('{{ form.is_organ.id_for_label }}').checked;
+        toggleParentField(isOrgan);
+    });
+</script>
+{% endif %}

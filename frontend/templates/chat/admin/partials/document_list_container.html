@@ -1,0 +1,6 @@
+{% load i18n %}
+
+{# This is a container template that will be used when paginating or searching documents #}
+<div class="document-list-wrapper" style="min-height: 400px;">
+    {% include "chat/admin/partials/document_list.html" with page_obj=page_obj search_query=search_query page_size=page_size %}
+</div>

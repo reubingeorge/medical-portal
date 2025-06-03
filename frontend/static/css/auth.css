@@ -1,0 +1,182 @@
+/* 
+ * Authentication related styles for Medical Portal
+ */
+
+.auth-container {
+  @apply min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50;
+}
+
+.auth-header {
+  @apply sm:mx-auto sm:w-full sm:max-w-md;
+}
+
+.auth-logo {
+  @apply mx-auto h-12 w-auto;
+}
+
+.auth-title {
+  @apply mt-6 text-center text-3xl font-extrabold text-gray-900;
+}
+
+.auth-subtitle {
+  @apply mt-2 text-center text-sm text-gray-600;
+}
+
+.auth-form-container {
+  @apply mt-8 sm:mx-auto sm:w-full sm:max-w-md;
+}
+
+.auth-form {
+  @apply bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10;
+}
+
+.auth-form-group {
+  @apply space-y-6;
+}
+
+.auth-divider {
+  @apply mt-6 relative;
+}
+
+.auth-divider::before {
+  content: '';
+  @apply block absolute inset-0 top-1/2 w-full border-t border-gray-300;
+}
+
+.auth-divider-text {
+  @apply relative flex justify-center text-sm;
+}
+
+.auth-divider-text-inner {
+  @apply px-2 bg-white text-gray-500;
+}
+
+.auth-social-buttons {
+  @apply mt-6 grid grid-cols-2 gap-3;
+}
+
+.auth-social-button {
+  @apply w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50;
+}
+
+.auth-error {
+  @apply mt-2 text-sm text-red-600;
+}
+
+.auth-success {
+  @apply mt-2 text-sm text-green-600;
+}
+
+.auth-links {
+  @apply mt-6 flex items-center justify-between;
+}
+
+.auth-link {
+  @apply text-sm text-blue-600 hover:text-blue-500;
+}
+
+/* Form elements */
+.auth-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.auth-input {
+  @apply appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm;
+}
+
+.auth-checkbox-container {
+  @apply flex items-center;
+}
+
+.auth-checkbox {
+  @apply h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded;
+}
+
+.auth-checkbox-label {
+  @apply ml-2 block text-sm text-gray-900;
+}
+
+.auth-submit {
+  @apply w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500;
+}
+
+/* Specific pages */
+.verification-container {
+  @apply max-w-md mx-auto p-6 bg-white shadow-md rounded-lg mt-10;
+}
+
+.verification-icon {
+  @apply mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100;
+}
+
+.verification-icon-inner {
+  @apply h-6 w-6 text-green-600;
+}
+
+.verification-title {
+  @apply mt-3 text-center text-lg font-medium text-gray-900;
+}
+
+.verification-message {
+  @apply mt-2 text-center text-sm text-gray-600;
+}
+
+.password-reset-container {
+  @apply max-w-md mx-auto p-6 bg-white shadow-md rounded-lg mt-10;
+}
+
+/* Password strength meter */
+.password-strength-meter {
+  @apply h-2 w-full bg-gray-200 rounded-full mt-2 overflow-hidden;
+}
+
+.password-strength-bar {
+  @apply h-full transition-all duration-300;
+}
+
+.password-strength-bar-weak {
+  @apply bg-red-500 w-1/4;
+}
+
+.password-strength-bar-fair {
+  @apply bg-yellow-500 w-2/4;
+}
+
+.password-strength-bar-good {
+  @apply bg-blue-500 w-3/4;
+}
+
+.password-strength-bar-strong {
+  @apply bg-green-500 w-full;
+}
+
+.password-strength-text {
+  @apply mt-1 text-xs;
+}
+
+.password-strength-text-weak {
+  @apply text-red-600;
+}
+
+.password-strength-text-fair {
+  @apply text-yellow-600;
+}
+
+.password-strength-text-good {
+  @apply text-blue-600;
+}
+
+.password-strength-text-strong {
+  @apply text-green-600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .auth-form {
+    @apply px-6 py-6;
+  }
+  
+  .auth-social-buttons {
+    @apply grid-cols-1 gap-2;
+  }
+}

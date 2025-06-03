@@ -1,0 +1,1492 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Cancer Types" %} | {% trans "Medical Portal" %}{% endblock %}
+
+{% block meta_description %}{% trans "Manage cancer types in the medical portal" %}{% endblock %}
+
+{% block extra_head %}
+<!-- Make sure CSRF token is available for HTMX DELETE requests -->
+<meta name="csrf-token" content="{{ csrf_token }}">
+<!-- Alpine.js will be used for the custom confirmation dialog -->
+<script src="https://unpkg.com/alpinejs@3.13.0" defer></script>
+<!-- Tippy.js for enhanced tooltips -->
+<script src="https://unpkg.com/@popperjs/core@2"></script>
+<script src="https://unpkg.com/tippy.js@6"></script>
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css">
+<link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light-border.css">
+<!-- Add x-cloak style in the head to prevent modal flash -->
+<style>
+    [x-cloak] { 
+        display: none !important; 
+    }
+    
+    /* Add transition styles for search effects */
+    .table-container {
+        transition: opacity 0.2s ease-in-out;
+    }
+    
+    /* Custom tooltip styles */
+    .tippy-box[data-theme~='light-border'] {
+        max-width: 350px !important;
+        background-color: white;
+        color: #333;
+        padding: 5px 0;
+        border-radius: 0.375rem;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        border: 1px solid #e5e7eb;
+    }
+    
+    .tippy-box[data-theme~='light-border'] .tippy-content {
+        padding: 12px 15px;
+        white-space: normal;
+        text-align: left;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    /* Style cursor to indicate tooltip is available */
+    .hover-tooltip {
+        cursor: help;
+    }
+</style>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cancer-types-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .page-title {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 2rem;
+    }
+    .content-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .table-container {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    .table {
+        width: 100%;
+        table-layout: fixed; /* Changed back to fixed for more predictable column sizing */
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .action-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.375rem;
+        font-weight: 500;
+        text-align: center;
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+    }
+    .primary-button {
+        background-color: #2563eb;
+        color: white;
+    }
+    .primary-button:hover {
+        background-color: #1d4ed8;
+        color: white;
+    }
+    .secondary-button {
+        border: 1px solid #d1d5db;
+        background-color: white;
+        color: #374151;
+    }
+    .secondary-button:hover {
+        background-color: #f3f4f6;
+        color: #111827;
+    }
+    .danger-button {
+        background-color: #ef4444;
+        color: white;
+    }
+    .danger-button:hover {
+        background-color: #dc2626;
+        color: white;
+    }
+    
+    /* Modal button styles */
+    .modal-footer .action-button {
+        width: auto;
+        height: auto;
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        min-width: 5rem;
+    }
+    .modal-footer .primary-button {
+        background-color: #2563eb;
+        color: white;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .modal-footer .secondary-button {
+        background-color: #f3f4f6;
+        color: #4b5563;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .modal-footer .danger-button {
+        background-color: #ef4444;
+        color: white;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .action-buttons-container {
+        display: flex;
+        justify-content: center; 
+        gap: 0.5rem;
+        width: 100%; /* Use full width of the container */
+        overflow: visible; /* Ensure content is visible */
+        margin: 0 auto; /* Center the container */
+    }
+    .form-section {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #e5e7eb;
+    }
+    .form-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+    }
+    .form-row {
+        margin-bottom: 1rem;
+    }
+    .form-label {
+        display: block;
+        font-weight: 500;
+        color: #374151;
+        margin-bottom: 0.5rem;
+    }
+    .form-input {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+    .form-input:focus {
+        outline: 2px solid #3b82f6;
+        border-color: #3b82f6;
+    }
+    .form-textarea {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        min-height: 100px;
+    }
+    .form-textarea:focus {
+        outline: 2px solid #3b82f6;
+        border-color: #3b82f6;
+    }
+    .form-submit {
+        margin-top: 1rem;
+    }
+    .table th {
+        text-align: left;
+        padding: 0.75rem 1rem;
+        font-weight: 500;
+        color: #6b7280;
+        background-color: #f9fafb;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+        color: #1f2937;
+        vertical-align: top; /* Keep consistent vertical alignment */
+    }
+    .table tr:last-child td {
+        border-bottom: none;
+    }
+    /* Fixed width for action column */
+    .table th.actions-column,
+    .table td.actions-column {
+        width: 300px !important;
+        min-width: 300px !important;
+        max-width: 300px !important;
+    }
+    
+    /* Force description column to truncate */
+    .description-column {
+        max-width: 280px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .badge-success {
+        background-color: #dcfce7;
+        color: #166534;
+    }
+    .badge-info {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
+    .error-message {
+        color: #b91c1c;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    .success-message {
+        color: #15803d;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Custom modal dialog styles */
+    .modal-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 50;
+    }
+    .modal-container {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        max-width: 28rem;
+        overflow: hidden;
+        max-height: calc(100vh - 2rem);
+    }
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .modal-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+    .modal-body {
+        padding: 1.5rem;
+        color: #4b5563;
+    }
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    /* Animation for modals */
+    .modal-enter {
+        animation: modalFadeIn 0.2s ease-out forwards;
+    }
+    .modal-leave {
+        animation: modalFadeOut 0.2s ease-in forwards;
+    }
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+    @keyframes modalFadeOut {
+        from {
+            opacity: 1;
+            transform: scale(1);
+        }
+        to {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+    }
+
+    /* Document list styles to match the other page */
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .rows-per-page {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .custom-select {
+        position: relative;
+        min-width: 80px;
+    }
+
+    .custom-select select {
+        appearance: none;
+        -webkit-appearance: none;
+        padding: 0.5rem 2rem 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        background-color: white;
+        font-size: 0.875rem;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .custom-select::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        right: 0.75rem;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid #6b7280;
+        pointer-events: none;
+    }
+
+    /* Mobile card styles improvements */
+    .mobile-card {
+        padding: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .mobile-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+    }
+
+    .mobile-card-title {
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .mobile-card-content {
+        margin-bottom: 0.75rem;
+    }
+
+    .mobile-card-section {
+        margin-bottom: 0.5rem;
+    }
+
+    .mobile-card-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+
+    .mobile-card-value {
+        font-size: 0.875rem;
+    }
+
+    .mobile-card-footer {
+        display: flex;
+        justify-content: center;
+        padding-top: 1rem;
+        padding-bottom: 0.5rem;
+        border-top: 1px solid #f3f4f6;
+    }
+
+    .truncate-description {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cancer-types-container">
+    <h1 class="page-title">{% trans "Manage Cancer Types" %}</h1>
+
+    <!-- Cancer Types List -->
+    <div class="content-card">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+            <h2 class="text-xl font-semibold text-gray-900">{% trans "Cancer Types" %}</h2>
+
+            <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <!-- Live search -->
+                <div class="relative w-full sm:w-64">
+                    <input type="text" id="cancer-search" name="q" value="{{ search_query }}" placeholder="{% trans 'Search cancer types...' %}"
+                           class="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                        <!-- Search icon (always visible) -->
+                        <svg class="h-5 w-5 text-gray-400 search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                    {% if search_query %}
+                    <a href="{% url 'medical:admin_cancer_types' %}{% if items_per_page %}?items_per_page={{ items_per_page }}{% endif %}" class="absolute inset-y-0 right-10 pr-2 flex items-center text-gray-400 hover:text-gray-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </a>
+                    {% endif %}
+                </div>
+
+                <!-- Add new type button -->
+                {% if request.htmx %}
+                <button
+                    class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-md hover:from-blue-600 hover:to-blue-800 shadow-md transition-all duration-200 transform hover:-translate-y-1 inline-flex items-center font-medium w-full sm:w-auto justify-center sm:justify-start"
+                    hx-get="{% url 'medical:admin_cancer_types' %}?form=1"
+                    hx-target="#form-container"
+                    hx-swap="innerHTML"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    {% trans "Add New Type" %}
+                </button>
+                {% else %}
+                <a href="#add-form" class="px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-md hover:from-blue-600 hover:to-blue-800 shadow-md transition-all duration-200 transform hover:-translate-y-1 inline-flex items-center font-medium w-full sm:w-auto justify-center sm:justify-start">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    {% trans "Add New Type" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="table-container">
+            {% if cancer_types %}
+            <!-- Responsive table design -->
+            <div class="overflow-hidden border border-gray-200 rounded-md shadow-sm mb-4">
+                <!-- Desktop view (traditional table) - hidden on small screens -->
+                <div class="hidden md:block">
+                    <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                        <colgroup>
+                            <col style="width: 16%"> <!-- Name -->
+                            <col style="width: 10%"> <!-- Type -->
+                            <col style="width: 24%"> <!-- Description (adjusted) -->
+                            <col style="width: 7%"> <!-- Subtypes -->
+                            <col style="width: 7%"> <!-- Patient Count -->
+                            <col style="width: 36%"> <!-- Actions (increased for buttons with text) -->
+                        </colgroup>
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('name', '{{ current_sort }}', '{{ current_order }}')">
+                                    {% trans "Name" %}
+                                    {% if current_sort == 'name' %}
+                                        {% if current_order == 'asc' %}
+                                        <span class="inline-block ml-1">▲</span>
+                                        {% else %}
+                                        <span class="inline-block ml-1">▼</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    {% trans "Type" %}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer description-column" onclick="sortTable('description', '{{ current_sort }}', '{{ current_order }}')">
+                                    {% trans "Description" %}
+                                    {% if current_sort == 'description' %}
+                                        {% if current_order == 'asc' %}
+                                        <span class="inline-block ml-1">▲</span>
+                                        {% else %}
+                                        <span class="inline-block ml-1">▼</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('subtypes_count', '{{ current_sort }}', '{{ current_order }}')">
+                                    {% trans "Subtypes" %}
+                                    {% if current_sort == 'subtypes_count' %}
+                                        {% if current_order == 'asc' %}
+                                        <span class="inline-block ml-1">▲</span>
+                                        {% else %}
+                                        <span class="inline-block ml-1">▼</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onclick="sortTable('patient_count', '{{ current_sort }}', '{{ current_order }}')">
+                                    {% trans "Patient Count" %}
+                                    {% if current_sort == 'patient_count' %}
+                                        {% if current_order == 'asc' %}
+                                        <span class="inline-block ml-1">▲</span>
+                                        {% else %}
+                                        <span class="inline-block ml-1">▼</span>
+                                        {% endif %}
+                                    {% endif %}
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider actions-column">
+                                    {% trans "Actions" %}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for cancer_type in cancer_types %}
+                            <tr class="hover:bg-gray-50 {% if cancer_type.just_added %}bg-green-50{% endif %} {% if cancer_type.is_organ %}bg-gray-100{% endif %}" id="cancer-type-{{ cancer_type.id }}">
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-gray-900">
+                                        {% if cancer_type.parent %}
+                                        <span class="pl-4 inline-flex items-center">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                                            </svg>
+                                            {{ cancer_type.name }}
+                                        </span>
+                                        {% else %}
+                                        <span class="font-medium {% if cancer_type.is_organ %}text-blue-600{% endif %}">{{ cancer_type.name }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if cancer_type.is_organ %}
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        {% trans "Organ" %}
+                                    </span>
+                                    {% elif cancer_type.parent %}
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                        {% trans "Subtype" %}
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                        {% trans "Other" %}
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4 description-column">
+                                    <div class="text-sm text-gray-900">
+                                        <div class="flex">
+                                            <div 
+                                                class="truncate hover-tooltip relative"
+                                                data-tippy-content="{{ cancer_type.description|default:'-' }}"
+                                            >
+                                                {{ cancer_type.description|default:"-"|truncatechars:75 }}
+                                                {% if cancer_type.description|length > 75 %}
+                                                <span class="inline-block ml-1 text-blue-500 cursor-pointer"
+                                                    onclick="showFullDescription('{{ cancer_type.description|escapejs }}', '{{ cancer_type.name|escapejs }}')">
+                                                    ...
+                                                </span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {% if cancer_type.is_organ %}
+                                    {% with count=cancer_type.subtypes.count|default:"0" %}
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {% if count > 0 %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                                        {{ count }}
+                                    </span>
+                                    {% endwith %}
+                                    {% else %}
+                                    <span class="text-xs text-gray-500">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {% if cancer_type.patient_count|default:cancer_type.get_patient_count|default:0 > 0 %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ cancer_type.patient_count|default:cancer_type.get_patient_count|default:"0" }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-center actions-column">
+                                    <div class="flex justify-center items-center space-x-2 w-full">
+                                        <!-- Edit button -->
+                                        <button
+                                            class="px-3.5 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-md hover:from-green-600 hover:to-green-700 shadow-sm transition-all duration-200 inline-flex items-center justify-center text-xs font-medium whitespace-nowrap"
+                                            hx-get="{% url 'medical:admin_cancer_types' %}?edit={{ cancer_type.id }}"
+                                            hx-target="#form-container"
+                                            hx-swap="innerHTML"
+                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                            {% trans "Edit" %}
+                                        </button>
+
+                                        <!-- Add subtype button - only for organ types -->
+                                        {% if cancer_type.is_organ %}
+                                        <button
+                                            class="px-3.5 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-md hover:from-blue-600 hover:to-blue-700 shadow-sm transition-all duration-200 inline-flex items-center justify-center text-xs font-medium whitespace-nowrap"
+                                            hx-get="{% url 'medical:admin_cancer_types' %}?form=1&parent={{ cancer_type.id }}"
+                                            hx-target="#form-container"
+                                            hx-swap="innerHTML"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                            </svg>
+                                            {% trans "Add Subtype" %}
+                                        </button>
+                                        {% endif %}
+
+                                        <!-- Delete button - if no patients and (not organ or no subtypes) -->
+                                        {% if cancer_type.patient_count|default:cancer_type.get_patient_count|default:0 == 0 and not cancer_type.is_organ or cancer_type.subtypes.count == 0 %}
+                                        <button
+                                            class="px-3.5 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-md hover:from-red-600 hover:to-red-700 shadow-sm transition-all duration-200 inline-flex items-center justify-center text-xs font-medium whitespace-nowrap"
+                                            data-cancer-id="{{ cancer_type.id }}"
+                                            data-cancer-name="{{ cancer_type.name|escapejs }}"
+                                            onclick="showDeleteConfirmation(this)"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                            {% trans "Delete" %}
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile view (card-based layout) - shown only on small screens -->
+                <div class="md:hidden">
+                    {% for cancer_type in cancer_types %}
+                    <div class="mobile-card {% if cancer_type.just_added %}bg-green-50{% endif %} {% if cancer_type.is_organ %}bg-gray-100{% endif %}">
+                        <!-- Name and type -->
+                        <div class="mobile-card-header">
+                            <div>
+                                <div class="mobile-card-title">
+                                    {% if cancer_type.parent %}
+                                    <span class="pl-4 inline-flex items-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                                        </svg>
+                                        {{ cancer_type.name }}
+                                    </span>
+                                    {% else %}
+                                    <span class="font-medium {% if cancer_type.is_organ %}text-blue-600{% endif %}">{{ cancer_type.name }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-1">
+                                    {% if cancer_type.is_organ %}
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                        {% trans "Organ" %}
+                                    </span>
+                                    {% elif cancer_type.parent %}
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                        {% trans "Subtype" %}
+                                    </span>
+                                    {% else %}
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                        {% trans "Other" %}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mobile-card-content">
+                            <div class="mobile-card-section">
+                                <div class="mobile-card-label">{% trans "Description" %}</div>
+                                <div class="mobile-card-value truncate-description hover-tooltip" data-tippy-content="{{ cancer_type.description|default:'-' }}">
+                                    {{ cancer_type.description|default:"-"|truncatechars:100 }}
+                                    {% if cancer_type.description|length > 100 %}
+                                    <span class="ml-1 text-blue-500 cursor-pointer"
+                                          onclick="showFullDescription('{{ cancer_type.description|escapejs }}', '{{ cancer_type.name|escapejs }}')">
+                                        {% trans "Read more" %}
+                                    </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Counts - side by side on mobile -->
+                        <div class="flex justify-start space-x-4 mt-2">
+                            <!-- Subtypes count -->
+                            <div class="mobile-card-section">
+                                <div class="mobile-card-label">{% trans "Subtypes" %}</div>
+                                {% if cancer_type.is_organ %}
+                                {% with count=cancer_type.subtypes.count|default:"0" %}
+                                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {% if count > 0 %}bg-green-100 text-green-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                                    {{ count }}
+                                </span>
+                                {% endwith %}
+                                {% else %}
+                                <span class="text-xs text-gray-500">-</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Patient count -->
+                            <div class="mobile-card-section">
+                                <div class="mobile-card-label">{% trans "Patients" %}</div>
+
+                                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {% if cancer_type.patient_count|default:cancer_type.get_patient_count|default:0 > 0 %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ cancer_type.patient_count|default:cancer_type.get_patient_count|default:"0" }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Action buttons in separate row -->
+                        <div class="mobile-card-footer">
+                            <div class="flex justify-center items-center space-x-4">
+                                <!-- Edit button -->
+                                <button
+                                    class="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-200 inline-flex items-center justify-center shadow-lg transform hover:scale-105"
+                                    hx-get="{% url 'medical:admin_cancer_types' %}?edit={{ cancer_type.id }}"
+                                    hx-target="#form-container"
+                                    hx-swap="innerHTML"
+                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                    title="{% trans 'Edit cancer type' %}"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </button>
+
+                                <!-- Add subtype button - only for organ types -->
+                                {% if cancer_type.is_organ %}
+                                <button
+                                    class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full hover:from-blue-600 hover:to-blue-700 transition-all duration-200 inline-flex items-center justify-center shadow-lg transform hover:scale-105"
+                                    hx-get="{% url 'medical:admin_cancer_types' %}?form=1&parent={{ cancer_type.id }}"
+                                    hx-target="#form-container"
+                                    hx-swap="innerHTML"
+                                    title="{% trans 'Add subtype' %}"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                    </svg>
+                                </button>
+                                {% endif %}
+
+                                <!-- Delete button -->
+                                {% if cancer_type.patient_count|default:cancer_type.get_patient_count|default:0 == 0 and not cancer_type.is_organ or cancer_type.subtypes.count == 0 %}
+                                <button
+                                    class="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-full hover:from-red-600 hover:to-red-700 transition-all duration-200 inline-flex items-center justify-center shadow-lg transform hover:scale-105"
+                                    data-cancer-id="{{ cancer_type.id }}"
+                                    data-cancer-name="{{ cancer_type.name|escapejs }}"
+                                    onclick="showDeleteConfirmation(this)"
+                                    title="{% trans 'Delete cancer type' %}"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Pagination controls matching document page -->
+            {% if page_obj.paginator.num_pages > 1 %}
+            <!-- Pagination size control -->
+            <div class="pagination-controls mb-4">
+                <div class="rows-per-page">
+                    <span class="text-sm text-gray-600">{% trans "Rows per page:" %}</span>
+                    <div class="custom-select">
+                        <select id="itemsPerPage" onchange="changeItemsPerPage(this.value)">
+                            <option value="5" {% if items_per_page == 5 or not items_per_page %}selected{% endif %}>5</option>
+                            <option value="10" {% if items_per_page == 10 %}selected{% endif %}>10</option>
+                            <option value="25" {% if items_per_page == 25 %}selected{% endif %}>25</option>
+                            <option value="50" {% if items_per_page == 50 %}selected{% endif %}>50</option>
+                        </select>
+                    </div>
+                </div>
+
+                {% if page_obj %}
+                <div class="text-sm text-gray-600">
+                    {% trans "Showing" %}
+                    <span class="font-medium">{{ page_obj.start_index }}</span>
+                    {% trans "to" %}
+                    <span class="font-medium">{{ page_obj.end_index }}</span>
+                    {% trans "of" %}
+                    <span class="font-medium">{{ page_obj.paginator.count }}</span>
+                    {% trans "entries" %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Modern pagination section -->
+            <div class="my-6 flex justify-center">
+                <nav class="flex items-center space-x-1" aria-label="Pagination">
+                    <!-- Previous button -->
+                    {% if page_obj.has_previous %}
+                    <a href="javascript:void(0)" onclick="goToPage({{ page_obj.previous_page_number }})"
+                       class="px-3 py-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200 flex items-center"
+                       aria-label="Previous page">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                    {% else %}
+                    <span class="px-3 py-2 rounded-full text-gray-300 cursor-not-allowed" aria-disabled="true">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    {% endif %}
+
+                    <!-- Page numbers -->
+                    <div class="flex space-x-1">
+                        {% for i in page_obj.paginator.page_range %}
+                            {% if page_obj.number == i %}
+                                <span class="px-3 py-1 rounded-full bg-blue-500 text-white font-medium">
+                                    {{ i }}
+                                </span>
+                            {% else %}
+                                {% if i > page_obj.number|add:"-3" and i < page_obj.number|add:"3" %}
+                                <a href="javascript:void(0)" onclick="goToPage({{ i }})"
+                                   class="px-3 py-1 rounded-full border border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200">
+                                    {{ i }}
+                                </a>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    <!-- Next button -->
+                    {% if page_obj.has_next %}
+                    <a href="javascript:void(0)" onclick="goToPage({{ page_obj.next_page_number }})"
+                       class="px-3 py-2 rounded-full text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200 flex items-center"
+                       aria-label="Next page">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                    {% else %}
+                    <span class="px-3 py-2 rounded-full text-gray-300 cursor-not-allowed" aria-disabled="true">
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                    </span>
+                    {% endif %}
+                </nav>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="empty-state">
+                {% if search_query %}
+                <p>{% trans "No cancer types found matching" %} "{{ search_query }}"</p>
+                {% else %}
+                <p>{% trans "No cancer types have been defined yet." %}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Add/Edit Form -->
+    <div id="form-container" class="mb-8">
+        {% if show_form != False %}
+        <div class="w-full bg-white rounded-lg shadow-md">
+            <!-- Form header with gradient background -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4 rounded-t-lg">
+                <h2 class="text-xl font-bold text-white">
+                    {% if form.instance.pk %}
+                    {% trans "Edit Cancer Type" %}
+                    {% else %}
+                    {% trans "Add New Cancer Type" %}
+                    {% endif %}
+                </h2>
+            </div>
+
+            <!-- Form body with proper spacing and shadows -->
+            <div class="p-6">
+                <form method="post" {% if request.htmx %}hx-post="{% url 'medical:admin_cancer_types' %}" hx-target="#form-container"{% endif %} class="max-w-md mx-auto">
+                    {% csrf_token %}
+
+                    {% if form.instance.pk %}
+                    <input type="hidden" name="id" value="{{ form.instance.pk }}">
+                    {% endif %}
+
+                    <!-- Name field with improved styling -->
+                    <div class="mb-5">
+                        <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {% trans "Name" %}<span class="text-red-500 ml-1">*</span>
+                        </label>
+                        <input type="text" name="name" id="{{ form.name.id_for_label }}" value="{{ form.instance.name|default:'' }}"
+                            class="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base" required>
+                        {% if form.name.errors %}
+                        <div class="mt-2 text-sm text-red-600 font-medium">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Organ type checkbox with improved styling -->
+                    <div class="mb-5 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                        <div class="flex items-center mb-2">
+                            <input type="checkbox" name="is_organ" id="{{ form.is_organ.id_for_label }}"
+                                {% if form.instance.is_organ %}checked{% endif %}
+                                class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                onchange="toggleParentField(this.checked)">
+                            <label for="{{ form.is_organ.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-900">
+                                {% trans "This is an organ-level cancer type" %}
+                            </label>
+                        </div>
+                        {% if form.is_organ.errors %}
+                        <div class="mt-1 text-sm text-red-600 font-medium">{{ form.is_organ.errors.0 }}</div>
+                        {% endif %}
+                        <p class="text-xs text-gray-500 mt-1 italic">{% trans "Organ-level types can have subtypes and are available for chat documents." %}</p>
+                    </div>
+
+                    <!-- Parent field with conditional display -->
+                    <div class="mb-5" id="parent-field" {% if form.instance.is_organ %}style="display: none;"{% endif %}>
+                        <label for="{{ form.parent.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {% trans "Parent Cancer Type" %}{% if not form.instance.is_organ %}<span class="text-red-500 ml-1">*</span>{% endif %}
+                        </label>
+                        <select name="parent" id="{{ form.parent.id_for_label }}"
+                            class="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base appearance-none bg-white bg-no-repeat bg-right pr-10"
+                            style="background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"6 9 12 15 18 9\"></polyline></svg>'); background-size: 1.25rem;"
+                            {% if not form.instance.is_organ and not form.initial.is_organ %}required{% endif %}>
+                            <option value="" {% if not form.instance.parent and not request.GET.parent %}selected{% endif %}>
+                                {% trans "Select a parent cancer type" %}
+                            </option>
+                            {% for parent in organ_cancer_types %}
+                            <option value="{{ parent.id }}" {% if form.instance.parent.id == parent.id or request.GET.parent|slugify == parent.id|slugify %}selected{% endif %}>
+                                {{ parent.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.parent.errors %}
+                        <div class="mt-2 text-sm text-red-600 font-medium">{{ form.parent.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Description textarea with improved styling -->
+                    <div class="mb-5">
+                        <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {% trans "Description" %}
+                        </label>
+                        <textarea name="description" id="{{ form.description.id_for_label }}" rows="4"
+                            class="w-full px-4 py-2 rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-base">{{ form.instance.description|default:'' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="mt-2 text-sm text-red-600 font-medium">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Form actions with improved button styling -->
+                    <div class="flex justify-end space-x-4 mt-8 pt-4 border-t border-gray-100">
+                        {% if request.htmx %}
+                        <button
+                            type="button"
+                            class="px-5 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 shadow-sm transition-all duration-200 inline-flex items-center justify-center font-medium text-sm"
+                            hx-get="{% url 'medical:admin_cancer_types' %}?form=0"
+                            hx-target="#form-container"
+                            hx-swap="innerHTML"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            {% trans "Cancel" %}
+                        </button>
+                        {% endif %}
+
+                        <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-md hover:from-blue-600 hover:to-blue-800 shadow-md transition-all duration-200 inline-flex items-center justify-center font-medium text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                {% if form.instance.pk %}
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                {% else %}
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                {% endif %}
+                            </svg>
+                            {% if form.instance.pk %}
+                            {% trans "Update Cancer Type" %}
+                            {% else %}
+                            {% trans "Add Cancer Type" %}
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="w-full bg-white rounded-lg shadow-md p-8 text-center">
+            <div class="flex flex-col items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-blue-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">{% trans "Ready to Add a New Cancer Type?" %}</h3>
+                <p class="text-gray-600 mb-6">{% trans "Create a new cancer type to organize patient records by type or organ." %}</p>
+                <button
+                    class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-md hover:from-blue-600 hover:to-blue-800 shadow-md transition-all duration-200 inline-flex items-center justify-center font-medium"
+                    hx-get="{% url 'medical:admin_cancer_types' %}?form=1"
+                    hx-target="#form-container"
+                    hx-swap="innerHTML"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    {% trans "Add New Cancer Type" %}
+                </button>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Back to Dashboard -->
+    <div class="mt-8 text-center">
+        <a href="{% url 'medical:admin_dashboard' %}" class="px-5 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 shadow-sm transition-all duration-200 inline-flex items-center justify-center font-medium text-sm w-auto mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            {% trans "Back to Dashboard" %}
+        </a>
+    </div>
+    
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal-backdrop" style="display: none;">
+        <!-- Modal Content -->
+        <div class="modal-container modal-enter rounded-lg overflow-hidden shadow-xl">
+            <!-- Modal header with gradient background -->
+            <div class="bg-gradient-to-r from-red-600 to-red-800 px-6 py-4">
+                <h3 class="text-xl font-bold text-white">{% trans "Confirm Deletion" %}</h3>
+            </div>
+
+            <div class="bg-white p-6">
+                <div class="flex items-start mb-4">
+                    <div class="flex-shrink-0 bg-red-100 rounded-full p-2 mr-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p id="deleteConfirmationText" class="text-gray-800 font-medium">{% trans "Are you sure you want to delete this cancer type?" %}</p>
+                        <p class="mt-2 text-red-600 text-sm">{% trans "This action cannot be undone." %}</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-4 mt-6 pt-4 border-t border-gray-100">
+                    <button
+                        type="button"
+                        class="px-5 py-2.5 border border-gray-300 bg-white text-gray-700 rounded-md hover:bg-gray-50 shadow-sm transition-all duration-200 inline-flex items-center justify-center font-medium text-sm"
+                        onclick="closeDeleteModal()"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        {% trans "Cancel" %}
+                    </button>
+                    <button
+                        type="button"
+                        class="px-5 py-2.5 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-md hover:from-red-600 hover:to-red-800 shadow-md transition-all duration-200 inline-flex items-center justify-center font-medium text-sm"
+                        id="confirmDeleteButton"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        {% trans "Delete Cancer Type" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Description Modal -->
+    <div id="descriptionModal" class="modal-backdrop" style="display: none;">
+        <!-- Modal Content -->
+        <div class="modal-container modal-enter rounded-lg overflow-hidden shadow-xl" style="max-width: 40rem;">
+            <!-- Modal header with gradient background -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
+                <h3 class="text-xl font-bold text-white" id="descriptionTitle">{% trans "Cancer Type Description" %}</h3>
+            </div>
+
+            <div class="bg-white p-6">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 mb-4">
+                    <p id="descriptionText" class="whitespace-pre-wrap text-gray-800 leading-relaxed"></p>
+                </div>
+
+                <div class="flex justify-end mt-4">
+                    <button
+                        type="button"
+                        class="px-5 py-2.5 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-md hover:from-blue-600 hover:to-blue-800 shadow-md transition-all duration-200 inline-flex items-center justify-center font-medium text-sm"
+                        onclick="closeDescriptionModal()"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        {% trans "Close" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Load the cancer search script -->
+<script src="{% static 'js/cancer_search.js' %}"></script>
+
+<script>
+    // Function to toggle the parent field based on is_organ checkbox
+    function toggleParentField(isOrgan) {
+        const parentField = document.getElementById('parent-field');
+        const parentSelect = document.getElementById('id_parent');
+        
+        if (isOrgan) {
+            parentField.style.display = 'none';
+            parentSelect.required = false;
+            parentSelect.value = '';
+        } else {
+            parentField.style.display = 'block';
+            parentSelect.required = true;
+        }
+    }
+    
+    // Function to show full description in modal
+    function showFullDescription(description, name) {
+        // Set title and description
+        document.getElementById('descriptionTitle').textContent = decodeUnicodeEscapes(name);
+        
+        // Decode any Unicode escape sequences
+        const decodedDescription = decodeUnicodeEscapes(description);
+        
+        // Set the decoded text
+        document.getElementById('descriptionText').textContent = decodedDescription;
+        
+        // Show modal
+        const modal = document.getElementById('descriptionModal');
+        modal.style.display = 'flex';
+        
+        // Add animation class
+        setTimeout(() => {
+            const modalContainer = modal.querySelector('.modal-container');
+            if (modalContainer) {
+                modalContainer.classList.add('modal-enter');
+            }
+        }, 10);
+    }
+    
+    // Function to close description modal
+    function closeDescriptionModal() {
+        const modal = document.getElementById('descriptionModal');
+        
+        // Add leaving animation
+        const modalContainer = modal.querySelector('.modal-container');
+        if (modalContainer) {
+            modalContainer.classList.remove('modal-enter');
+            modalContainer.classList.add('modal-leave');
+            
+            // Hide modal after animation
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modalContainer.classList.remove('modal-leave');
+            }, 200);
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Tippy.js tooltips
+        initializeTooltips();
+        
+        // Add escape key handler for description modal
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeDescriptionModal();
+                closeDeleteModal();
+            }
+        });
+        
+        // Close description modal when clicking outside content
+        document.getElementById('descriptionModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeDescriptionModal();
+            }
+        });
+        // If there's a newly added or edited item, highlight it temporarily
+        const highlightedRows = document.querySelectorAll('.bg-green-50');
+        if (highlightedRows.length > 0) {
+            setTimeout(function() {
+                highlightedRows.forEach(function(row) {
+                    row.classList.remove('bg-green-50');
+                });
+            }, 3000);
+        }
+        
+        // Set up the delete confirmation button
+        document.getElementById('confirmDeleteButton').addEventListener('click', function() {
+            const cancerId = this.getAttribute('data-cancer-id');
+            
+            if (!cancerId) {
+                console.error("No cancer ID set for deletion");
+                return;
+            }
+            
+            // Get CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            // Create a form for deletion (more reliable than AJAX for this purpose)
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '{% url 'medical:admin_cancer_types' %}?delete=' + cancerId;
+            form.style.display = 'none';
+            
+            // Add CSRF token
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = csrfToken;
+            form.appendChild(csrfInput);
+            
+            // Add _method input to simulate DELETE
+            const methodInput = document.createElement('input');
+            methodInput.type = 'hidden';
+            methodInput.name = '_method';
+            methodInput.value = 'DELETE';
+            form.appendChild(methodInput);
+            
+            // Add form to document and submit
+            document.body.appendChild(form);
+            form.submit();
+        });
+        
+        // Add escape key handler for modal
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeDeleteModal();
+            }
+        });
+        
+        // Close modal when clicking outside content
+        document.getElementById('deleteModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeDeleteModal();
+            }
+        });
+
+        // Initialize any components that need JS functionality
+        reattachEventListeners();
+    });
+    
+    // Function to show the delete confirmation modal
+    function showDeleteConfirmation(button) {
+        const cancerId = button.getAttribute('data-cancer-id');
+        const cancerName = button.getAttribute('data-cancer-name');
+        
+        // Set the cancer ID on the confirm button
+        document.getElementById('confirmDeleteButton').setAttribute('data-cancer-id', cancerId);
+        
+        // Update confirmation text
+        document.getElementById('deleteConfirmationText').textContent = 
+            '{% trans "Are you sure you want to delete the cancer type" %}: ' + cancerName + '?';
+        
+        // Show the modal
+        const modal = document.getElementById('deleteModal');
+        modal.style.display = 'flex';
+        
+        // Add animation class
+        setTimeout(() => {
+            const modalContainer = modal.querySelector('.modal-container');
+            if (modalContainer) {
+                modalContainer.classList.add('modal-enter');
+            }
+        }, 10);
+    }
+    
+    // Function to close the delete confirmation modal
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        
+        // Add leaving animation
+        const modalContainer = modal.querySelector('.modal-container');
+        if (modalContainer) {
+            modalContainer.classList.remove('modal-enter');
+            modalContainer.classList.add('modal-leave');
+            
+            // Hide modal after animation
+            setTimeout(() => {
+                modal.style.display = 'none';
+                modalContainer.classList.remove('modal-leave');
+            }, 200);
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+    
+    // Function to handle table sorting
+    function sortTable(column, currentSort, currentOrder) {
+        let newOrder = 'asc';
+        
+        // If already sorting by this column, toggle order
+        if (column === currentSort) {
+            newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+        }
+        
+        // Redirect with sort parameters
+        const url = new URL(window.location.href);
+        
+        // Keep existing parameters
+        const params = new URLSearchParams(url.search);
+        params.set('sort', column);
+        params.set('order', newOrder);
+        
+        // If there's a page parameter and we're changing the sort, go back to page 1
+        if (params.has('page') && (column !== currentSort || newOrder !== currentOrder)) {
+            params.set('page', '1');
+        }
+        
+        // Set new parameters
+        url.search = params.toString();
+        
+        // Redirect
+        window.location.href = url.toString();
+    }
+    
+    // Function to handle pagination
+    function goToPage(page) {
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.search);
+        
+        // Update page parameter
+        params.set('page', page);
+        url.search = params.toString();
+        
+        // Redirect
+        window.location.href = url.toString();
+    }
+    
+    // Function to handle items per page changes
+    function changeItemsPerPage(itemsPerPage) {
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.search);
+        
+        // Update items_per_page parameter and reset to page 1
+        params.set('items_per_page', itemsPerPage);
+        params.set('page', '1');
+        url.search = params.toString();
+        
+        // Redirect
+        window.location.href = url.toString();
+    }
+    
+    // Function to decode Unicode escape sequences
+    function decodeUnicodeEscapes(str) {
+        if (!str || typeof str !== 'string') return str;
+        
+        try {
+            // First handle the standard \uXXXX escape sequences
+            let decoded = str.replace(/\\u([0-9a-fA-F]{4})/g, function(match, group) {
+                return String.fromCharCode(parseInt(group, 16));
+            });
+            
+            // Handle common HTML entities and escaped characters
+            const replacements = {
+                '\\u003B': ';',
+                '\\u003C': '<',
+                '\\u003E': '>',
+                '\\u002D': '-',
+                '\\u0022': '"',
+                '\\u0027': "'",
+                '\\u0026': '&',
+                '\\u002F': '/',
+                '\\u002C': ',',
+                '\\u003A': ':',
+                '\\u003D': '=',
+                '\\u003F': '?',
+                '\\u0040': '@',
+                '\\u005B': '[',
+                '\\u005D': ']',
+                '\\u005C': '\\',
+                '\\u007B': '{',
+                '\\u007D': '}',
+                '\\u007C': '|',
+                '\\u0060': '`',
+                '\\u0021': '!'
+            };
+            
+            // Replace each known escape sequence
+            for (const [escape, char] of Object.entries(replacements)) {
+                decoded = decoded.split(escape).join(char);
+            }
+            
+            // Additional passes to catch any multi-byte characters
+            decoded = decoded.replace(/\\u([0-9a-fA-F]{4})\\u([0-9a-fA-F]{4})/g, function(match, high, low) {
+                // Handle surrogate pairs if present
+                const highSurrogate = parseInt(high, 16);
+                const lowSurrogate = parseInt(low, 16);
+                if (highSurrogate >= 0xD800 && highSurrogate <= 0xDBFF && 
+                    lowSurrogate >= 0xDC00 && lowSurrogate <= 0xDFFF) {
+                    return String.fromCodePoint(((highSurrogate - 0xD800) * 0x400) + (lowSurrogate - 0xDC00) + 0x10000);
+                }
+                return String.fromCharCode(highSurrogate) + String.fromCharCode(lowSurrogate);
+            });
+            
+            return decoded;
+        } catch (e) {
+            console.error('Error decoding Unicode characters:', e);
+            return str; // Return original string on error
+        }
+    }
+    
+    // Function to initialize tooltips
+    function initializeTooltips() {
+        // Initialize tooltips for description cells
+        tippy('.hover-tooltip', {
+            content: (reference) => {
+                // Get content from the data attribute
+                let content = reference.getAttribute('data-tippy-content');
+                
+                // Decode any Unicode escape sequences
+                content = decodeUnicodeEscapes(content);
+                
+                // Return default text if content is empty
+                return content || "No description available";
+            },
+            allowHTML: true,  // Allow HTML formatting since we're using Django templates
+            placement: 'top-start',
+            arrow: true,
+            maxWidth: 350,
+            theme: 'light-border',
+            animation: 'scale',
+            duration: [200, 100],  // [show, hide] durations
+            delay: [300, 0],  // Show delay helps prevent accidental triggering
+            interactive: true,  // Allow interaction with tooltip content
+            appendTo: () => document.body,  // Append to body to avoid clipping
+            zIndex: 9999,
+            onShow(instance) {
+                // Only show tooltip if content is actually truncated
+                const reference = instance.reference;
+                if (reference.scrollWidth <= reference.clientWidth) {
+                    return false;  // Prevent tooltip from showing if not truncated
+                }
+            }
+        });
+    }
+    
+    // Re-initialize tooltips when content changes
+    document.addEventListener('htmx:afterSwap', function() {
+        initializeTooltips();
+    });
+</script>
+{% endblock %}

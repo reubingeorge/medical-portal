@@ -1,0 +1,639 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Medical Assistant" %} | {% trans "Medical Portal" %}{% endblock %}
+
+{% block meta_description %}{% trans "Chat with our medical assistant about your cancer care questions" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .message-bubble {
+        max-width: 80%;
+        border-radius: 1.15rem;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .user-bubble {
+        background-color: #e9f5ff;
+        color: #1a365d;
+        margin-left: auto;
+        border-bottom-right-radius: 0.25rem;
+    }
+
+    .assistant-bubble {
+        background-color: #f8f9fa;
+        color: #1a202c;
+        margin-right: auto;
+        border-bottom-left-radius: 0.25rem;
+    }
+
+    /* Markdown formatting styles */
+    .message-content {
+        line-height: 1.6;
+    }
+
+    .message-content p {
+        margin-bottom: 0.75rem;
+    }
+
+    .message-content p:last-child {
+        margin-bottom: 0;
+    }
+
+    .message-content ul, .message-content ol {
+        margin-left: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .message-content li {
+        margin-bottom: 0.25rem;
+    }
+
+    .message-content strong {
+        font-weight: 600;
+        color: #1a365d;
+    }
+
+    .message-content em {
+        font-style: italic;
+    }
+
+    .message-content code {
+        background-color: #f3f4f6;
+        padding: 0.125rem 0.25rem;
+        border-radius: 0.25rem;
+        font-family: 'Courier New', monospace;
+        font-size: 0.875em;
+    }
+
+    .message-content pre {
+        background-color: #f3f4f6;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        margin-bottom: 0.75rem;
+    }
+
+    .message-content h1, .message-content h2, .message-content h3,
+    .message-content h4, .message-content h5, .message-content h6 {
+        font-weight: 600;
+        margin-top: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .message-content h1 { font-size: 1.5rem; }
+    .message-content h2 { font-size: 1.25rem; }
+    .message-content h3 { font-size: 1.125rem; }
+    .message-content h4 { font-size: 1rem; }
+
+    /* Blockquotes */
+    .message-content blockquote {
+        border-left: 4px solid #cbd5e0;
+        padding-left: 1rem;
+        margin: 0.75rem 0;
+        color: #4a5568;
+        font-style: italic;
+    }
+
+    /* Tables */
+    .message-content table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+
+    .message-content th, .message-content td {
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem;
+        text-align: left;
+    }
+
+    .message-content th {
+        background-color: #f7fafc;
+        font-weight: 600;
+    }
+
+    .message-content tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+
+    /* Links */
+    .message-content a {
+        color: #3182ce;
+        text-decoration: underline;
+    }
+
+    .message-content a:hover {
+        color: #2c5282;
+    }
+
+    /* Horizontal rules */
+    .message-content hr {
+        border: none;
+        border-top: 1px solid #e2e8f0;
+        margin: 1rem 0;
+    }
+
+    .chat-container {
+        height: calc(100vh - 240px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 1rem;
+    }
+
+    .typing-indicator span {
+        animation: blink 1.4s infinite both;
+        display: inline-block;
+    }
+
+    .typing-indicator span:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .typing-indicator span:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+
+    @keyframes blink {
+        0% {
+            opacity: 0.1;
+            transform: scale(1);
+        }
+        20% {
+            opacity: 1;
+            transform: scale(1.2);
+        }
+        100% {
+            opacity: 0.1;
+            transform: scale(1);
+        }
+    }
+
+    .sessions-list {
+        max-height: calc(100vh - 240px);
+        overflow-y: auto;
+    }
+
+    @media (max-width: 768px) {
+        .chat-container {
+            height: calc(100vh - 180px);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="bg-white shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="py-4 flex items-center justify-between">
+            <h1 class="text-xl font-semibold text-gray-900">
+                {% trans "Medical Assistant" %}
+            </h1>
+
+            <div class="flex items-center space-x-4">
+                <!-- Session selector -->
+                <div x-data="{ open: false }" class="relative">
+                    <button
+                        @click="open = !open"
+                        class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        <span>{{ current_session.title }}</span>
+                        <svg class="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div
+                        x-show="open"
+                        @click.away="open = false"
+                        class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none z-10"
+                    >
+                        <div class="py-1">
+                            <a
+                                href="{% url 'chat:create_session' %}"
+                                hx-post="{% url 'chat:create_session' %}"
+                                hx-push-url="true"
+                                class="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                            >
+                                <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                {% trans "New Chat" %}
+                            </a>
+                        </div>
+
+                        {% if active_sessions %}
+                            <div class="py-1">
+                                {% for session in active_sessions %}
+                                    <a
+                                        href="{% url 'chat:chat_interface' %}?session={{ session.id }}"
+                                        class="{% if session.id == current_session.id %}bg-gray-100 text-gray-900{% else %}text-gray-700 hover:bg-gray-100 hover:text-gray-900{% endif %} group flex items-center px-4 py-2 text-sm"
+                                    >
+                                        <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                        </svg>
+                                        {{ session.title }}
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div class="py-1">
+                            <a
+                                href="{% url 'chat:chat_history' %}"
+                                class="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                            >
+                                <svg class="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {% trans "View All History" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rename session button -->
+                <button
+                    x-data="{
+                        showRenameModal: false,
+                        sessionTitle: '{{ current_session.title }}',
+                        saveSessionTitle() {
+                            fetch('{% url 'chat:update_session' current_session.id %}', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'X-CSRFToken': '{{ csrf_token }}'
+                                },
+                                body: new URLSearchParams({
+                                    'title': this.sessionTitle
+                                })
+                            })
+                            .then(response => {
+                                if (response.ok) {
+                                    this.showRenameModal = false;
+                                    // Reload page to show new title
+                                    window.location.reload();
+                                }
+                            });
+                        }
+                    }"
+                    @click="showRenameModal = true"
+                    class="inline-flex items-center p-1 border border-transparent rounded-full text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+
+                    <!-- Rename modal -->
+                    <div
+                        x-show="showRenameModal"
+                        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center"
+                        x-transition:enter="transition ease-out duration-300"
+                        x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100"
+                        x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100"
+                        x-transition:leave-end="opacity-0"
+                    >
+                        <div
+                            @click.away="showRenameModal = false"
+                            class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md transform transition-all"
+                            x-transition:enter="transition ease-out duration-300"
+                            x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                            x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                            x-transition:leave="transition ease-in duration-200"
+                            x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                            x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        >
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">{% trans "Rename Chat" %}</h3>
+
+                            <div class="mb-4">
+                                <label for="session-title" class="block text-sm font-medium text-gray-700">{% trans "Title" %}</label>
+                                <input
+                                    type="text"
+                                    id="session-title"
+                                    x-model="sessionTitle"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                    @keydown.enter="saveSessionTitle()"
+                                >
+                            </div>
+
+                            <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                                <button
+                                    type="button"
+                                    @click="saveSessionTitle()"
+                                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:col-start-2 sm:text-sm"
+                                >
+                                    {% trans "Save" %}
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="showRenameModal = false"
+                                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:col-start-1 sm:text-sm"
+                                >
+                                    {% trans "Cancel" %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="chat-container">
+            <!-- Chat messages -->
+            <div id="chat-messages" class="chat-messages relative">
+                {% if messages %}
+                    {% for message in messages %}
+                        {% if message.role == 'user' %}
+                            <div class="flex flex-col items-end mb-4">
+                                <div class="message-bubble user-bubble">
+                                    <div class="message-content">{{ message.content }}</div>
+                                </div>
+                                <span class="text-xs text-gray-500 mr-2">{{ message.created_at|date:"g:i A" }}</span>
+                            </div>
+                        {% else %}
+                            <div class="flex flex-col items-start mb-4">
+                                <div class="message-bubble assistant-bubble">
+                                    <div class="message-content" data-markdown="true">{{ message.content }}</div>
+                                </div>
+                                <div class="flex items-center ml-2">
+                                    <span class="text-xs text-gray-500">{{ message.created_at|date:"g:i A" }}</span>
+
+                                    <!-- Feedback buttons -->
+                                    <div
+                                        x-data="{
+                                            showFeedback: false,
+                                            helpful: null,
+                                            comment: '',
+                                            submitted: false
+                                        }"
+                                        class="ml-2"
+                                    >
+                                        <button
+                                            @click="showFeedback = !showFeedback"
+                                            class="text-xs text-gray-500 hover:text-blue-500 focus:outline-none"
+                                        >
+                                            {% trans "Feedback" %}
+                                        </button>
+
+                                        <div
+                                            x-show="showFeedback && !submitted"
+                                            class="mt-2 bg-gray-50 p-3 rounded-lg shadow-sm"
+                                        >
+                                            <p class="text-sm text-gray-700 mb-2">{% trans "Was this response helpful?" %}</p>
+
+                                            <div class="flex space-x-4 mb-3">
+                                                <button
+                                                    @click="helpful = true"
+                                                    class="px-3 py-1 text-sm rounded-full"
+                                                    :class="helpful === true ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+                                                >
+                                                    {% trans "Yes" %}
+                                                </button>
+                                                <button
+                                                    @click="helpful = false"
+                                                    class="px-3 py-1 text-sm rounded-full"
+                                                    :class="helpful === false ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+                                                >
+                                                    {% trans "No" %}
+                                                </button>
+                                            </div>
+
+                                            <div x-show="helpful !== null">
+                                                <textarea
+                                                    x-model="comment"
+                                                    placeholder="{% trans 'Optional: Tell us more about your experience...' %}"
+                                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    rows="2"
+                                                ></textarea>
+
+                                                <div class="flex justify-end mt-2">
+                                                    <button
+                                                        @click="
+                                                            fetch('{% url 'chat:chat_feedback' %}', {
+                                                                method: 'POST',
+                                                                headers: {
+                                                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                                                    'X-CSRFToken': '{{ csrf_token }}'
+                                                                },
+                                                                body: new URLSearchParams({
+                                                                    'message_id': '{{ message.id }}',
+                                                                    'helpful': helpful,
+                                                                    'comment': comment
+                                                                })
+                                                            })
+                                                            .then(response => {
+                                                                if (response.ok) {
+                                                                    submitted = true;
+                                                                }
+                                                            });
+                                                        "
+                                                        class="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                                    >
+                                                        {% trans "Submit" %}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="submitted" class="mt-2 text-sm text-green-600">
+                                            {% trans "Thank you for your feedback!" %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="flex items-center justify-center h-full">
+                        <div class="text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            </svg>
+                            <h3 class="mt-2 text-sm font-medium text-gray-900">{% trans "No messages" %}</h3>
+                            <p class="mt-1 text-sm text-gray-500">{% trans "Start a conversation with the medical assistant." %}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Typing indicator -->
+                <div id="typing-indicator" class="flex items-start mb-4 hidden">
+                    <div class="message-bubble assistant-bubble">
+                        <div class="typing-indicator flex">
+                            <span class="h-2 w-2 bg-gray-500 rounded-full mx-1"></span>
+                            <span class="h-2 w-2 bg-gray-500 rounded-full mx-1"></span>
+                            <span class="h-2 w-2 bg-gray-500 rounded-full mx-1"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scroll to bottom button -->
+                <button
+                    id="scroll-to-bottom"
+                    onclick="smoothScrollToBottom(); userScrolled=false;"
+                    class="absolute bottom-4 right-4 w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all transform translate-y-20 opacity-0"
+                    aria-label="Scroll to bottom"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Message input -->
+            <div class="border-t border-gray-200 p-4 bg-gray-50">
+                <form
+                    id="chat-form"
+                    hx-post="{% url 'chat:chat_message' %}"
+                    hx-target="#chat-messages"
+                    hx-swap="beforeend"
+                    hx-indicator="#typing-indicator"
+                    class="flex items-center space-x-2"
+                >
+                    {% csrf_token %}
+                    <div class="flex-grow">
+                        {{ form.message }}
+                    </div>
+                    <button
+                        type="submit"
+                        class="inline-flex items-center p-2 border border-transparent rounded-full shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Configure marked for better formatting
+    marked.setOptions({
+        breaks: true,
+        gfm: true,
+        headerIds: false,
+        mangle: false
+    });
+
+    // Smart auto-scroll function
+    let userScrolled = false;
+    let scrollThreshold = 100; // pixels from bottom to consider "at bottom"
+
+    function shouldAutoScroll() {
+        const chatMessages = document.getElementById('chat-messages');
+        const scrollPosition = chatMessages.scrollTop + chatMessages.clientHeight;
+        const scrollHeight = chatMessages.scrollHeight;
+
+        // If user hasn't manually scrolled, or is near bottom, auto-scroll
+        return !userScrolled || (scrollHeight - scrollPosition) < scrollThreshold;
+    }
+
+    function smoothScrollToBottom() {
+        const chatMessages = document.getElementById('chat-messages');
+        if (shouldAutoScroll()) {
+            chatMessages.scrollTo({
+                top: chatMessages.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    }
+
+    // Parse markdown in messages
+    function parseMarkdown() {
+        const markdownElements = document.querySelectorAll('[data-markdown="true"]');
+        markdownElements.forEach(element => {
+            if (!element.dataset.parsed) {
+                const rawContent = element.textContent;
+                const htmlContent = marked.parse(rawContent);
+                element.innerHTML = htmlContent;
+                element.dataset.parsed = "true";
+            }
+        });
+    }
+
+    // Track user scrolling and manage scroll button
+    document.getElementById('chat-messages').addEventListener('scroll', function() {
+        const chatMessages = this;
+        const scrollPosition = chatMessages.scrollTop + chatMessages.clientHeight;
+        const scrollHeight = chatMessages.scrollHeight;
+
+        // Check if user has scrolled up significantly
+        userScrolled = (scrollHeight - scrollPosition) > scrollThreshold;
+
+        // Show/hide scroll to bottom button
+        const scrollButton = document.getElementById('scroll-to-bottom');
+        if (userScrolled) {
+            scrollButton.classList.remove('translate-y-20', 'opacity-0');
+            scrollButton.classList.add('translate-y-0', 'opacity-100');
+        } else {
+            scrollButton.classList.add('translate-y-20', 'opacity-0');
+            scrollButton.classList.remove('translate-y-0', 'opacity-100');
+        }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        parseMarkdown();
+        smoothScrollToBottom();
+
+        // Focus input field
+        document.getElementById('{{ form.message.id_for_label }}').focus();
+    });
+
+    // Handle form submission
+    document.getElementById('chat-form').addEventListener('htmx:afterRequest', function(event) {
+        if (event.detail.successful) {
+            // Clear input field
+            document.getElementById('{{ form.message.id_for_label }}').value = '';
+
+            // Parse markdown in new messages
+            setTimeout(parseMarkdown, 50);
+
+            // Smart scroll
+            setTimeout(smoothScrollToBottom, 100);
+
+            // Focus input field
+            document.getElementById('{{ form.message.id_for_label }}').focus();
+
+            // Reset user scroll flag when new message is sent
+            userScrolled = false;
+        }
+    });
+
+    // Show typing indicator while processing
+    document.getElementById('chat-form').addEventListener('htmx:beforeRequest', function() {
+        const typingIndicator = document.getElementById('typing-indicator');
+        typingIndicator.classList.remove('hidden');
+
+        // Smart scroll for typing indicator
+        smoothScrollToBottom();
+    });
+
+    document.getElementById('chat-form').addEventListener('htmx:afterRequest', function() {
+        const typingIndicator = document.getElementById('typing-indicator');
+        typingIndicator.classList.add('hidden');
+    });
+
+    // Re-parse markdown when content is updated via HTMX
+    document.body.addEventListener('htmx:afterSettle', function() {
+        parseMarkdown();
+        smoothScrollToBottom();
+    });
+</script>
+{% endblock %}
