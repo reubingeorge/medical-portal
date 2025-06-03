@@ -36,6 +36,7 @@ A comprehensive medical portal for patients, doctors, and administrators with ad
    ```bash
    git clone https://github.com/yourusername/medical-portal.git
    cd medical-portal
+   docker compose up --build
    ```
 
 2. Start the Docker containers:
