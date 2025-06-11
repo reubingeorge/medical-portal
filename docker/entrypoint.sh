@@ -53,10 +53,17 @@ python manage.py migrate --noinput
 echo "Creating superuser (if not exists)..."
 python manage.py shell <<EOF
 from django.contrib.auth import get_user_model
-from apps.accounts.models import Role
+from apps.accounts.models import Role, Language
 User = get_user_model()
 email = "${DJANGO_SUPERUSER_EMAIL:-admin@example.com}"
 password = "${DJANGO_SUPERUSER_PASSWORD:-adminpass}"
+
+# Create languages first
+english, _ = Language.objects.get_or_create(code='en')
+spanish, _ = Language.objects.get_or_create(code='es')
+french, _ = Language.objects.get_or_create(code='fr')
+arabic, _ = Language.objects.get_or_create(code='ar')
+hindi, _ = Language.objects.get_or_create(code='hi')
 
 if not User.objects.filter(email=email).exists():
     # Ensure admin role exists
@@ -64,6 +71,7 @@ if not User.objects.filter(email=email).exists():
     # Create superuser with admin role
     user = User.objects.create_superuser(email=email, password=password)
     user.role = admin_role
+    user.language = english  # Use the language object, not the string
     user.save()
     print(f"Superuser with email {email} created")
 else:

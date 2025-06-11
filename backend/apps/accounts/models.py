@@ -216,8 +216,7 @@ class User(AbstractUser):
         blank=True,
         related_name='users',
         verbose_name=_('Preferred language'),
-        limit_choices_to={'code': 'en'},  # Default to English
-        default=Language.ENGLISH
+        limit_choices_to={'code': 'en'}  # Default to English
     )
     assigned_doctor = models.ForeignKey(
         'self',
