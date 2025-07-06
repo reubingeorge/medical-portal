@@ -36,11 +36,11 @@ def role_required(allowed_roles=None):
             if request.user.role.name not in allowed_roles:
                 # Redirect to appropriate dashboard based on role
                 if request.user.is_administrator():
-                    return redirect('admin_dashboard')
+                    return redirect('medical:admin_dashboard')
                 elif request.user.is_clinician():
-                    return redirect('doctor_dashboard')
+                    return redirect('medical:doctor_dashboard')
                 elif request.user.is_patient():
-                    return redirect('patient_dashboard')
+                    return redirect('medical:patient_dashboard')
                 else:
                     return HttpResponseForbidden(_('You do not have permission to access this page.'))
 
