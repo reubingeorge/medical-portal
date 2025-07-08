@@ -493,6 +493,22 @@ def admin_chat_documents(request):
         'cancer_types': CancerType.objects.filter(is_organ=True).order_by('name'),
     })
 
+
+@login_required
+@role_required(['administrator'])
+@require_POST
+def delete_chat_document(request, document_id):
+    """
+    Delete a chat document.
+    """
+    document = get_object_or_404(ChatDocument, id=document_id)
+    document.delete()
+
+    messages.success(request, _("Document deleted successfully."))
+
+    return redirect('chat:admin_chat_documents')
+
+
 @login_required
 @role_required(['administrator'])
 def edit_chat_document(request, document_id):
