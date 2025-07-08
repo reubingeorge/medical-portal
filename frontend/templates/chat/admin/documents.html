@@ -122,25 +122,6 @@
         });
     </script>
 
-    <script>
-        function updateFileName(input) {
-            const fileName = input.files[0] ? input.files[0].name : 'No file selected';
-            document.getElementById('file-name-display').textContent = fileName;
-            
-            // Auto-fill title if empty
-            const titleInput = document.querySelector('input[name="title"]');
-            if (titleInput && !titleInput.value && input.files[0]) {
-                titleInput.value = fileName.replace(/\.[^/.]+$/, "");
-            }
-            
-            // Auto-fill document type based on file extension
-            const documentTypeInput = document.querySelector('input[name="document_type"]');
-            if (documentTypeInput && input.files[0]) {
-                const extension = fileName.split('.').pop().toUpperCase();
-                documentTypeInput.value = extension;
-            }
-        }
-    </script>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
             <h2 class="text-2xl font-semibold text-gray-900 mb-6">Chat Documents Management</h2>
             
@@ -350,7 +331,7 @@
 <!-- Script files -->
 <script src="{% static 'js/document_search.js' %}"></script>
 <!-- <script src="{% static 'js/document_upload.js' %}"></script> -->
-<script src="{% static 'js/document_edit.js' %}"></script>
+<script src="{% static 'js/document_edit.js' %}"></script> 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // File input styling
