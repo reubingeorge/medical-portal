@@ -24,6 +24,7 @@ urlpatterns = [
     path('session/<uuid:session_id>/delete/', views.delete_session, name='delete_session'),
 
     # Admin views
+    path('admin/documents/statuses/', views.document_statuses, name='document_statuses'), #i new endpoint for status
     path('admin/documents/', views.admin_chat_documents, name='admin_chat_documents'),
     path('admin/documents/<uuid:document_id>/delete/', views.delete_chat_document, name='delete_chat_document'),
     path('admin/documents/<uuid:document_id>/edit/', views.edit_chat_document, name='edit_chat_document'),
